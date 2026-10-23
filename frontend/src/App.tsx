@@ -1,24 +1,30 @@
-import { useQuery } from '@tanstack/react-query'
-
-type Health = { status: string; database: string }
-
-async function fetchHealth(): Promise<Health> {
-  const response = await fetch('/api/health')
-  if (!response.ok) throw new Error(`API responded ${response.status}`)
-  return response.json()
-}
+import { useState } from 'react'
+import { ExpenseForm } from './components/ExpenseForm'
+import { ExpenseList } from './components/ExpenseList'
+import { currentMonth } from './lib/dates'
 
 export default function App() {
-  const health = useQuery({ queryKey: ['health'], queryFn: fetchHealth })
+  const [month, setMonth] = useState(currentMonth)
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 px-4">
-      <h1 className="text-3xl font-bold">Family Finances</h1>
-      <p className="text-gray-600">
-        {health.isPending && 'Connecting to the API…'}
-        {health.isError && `API unavailable: ${health.error.message}`}
-        {health.isSuccess && `API ${health.data.status} · database ${health.data.database}`}
-      </p>
-    </main>
+    <div className="min-h-screen bg-gray-50 text-gray-900">
+      <main className="mx-auto max-w-md space-y-6 px-4 py-6">
+        <header className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold">Family Finances</h1>
+          <label>
+            <span className="sr-only">Mes</span>
+            <input
+              type="month"
+              value={month}
+              onChange={(event) => event.target.value && setMonth(event.target.value)}
+              className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm"
+            />
+          </label>
+        </header>
+
+        <ExpenseForm />
+        <ExpenseList month={month} />
+      </main>
+    </div>
   )
 }

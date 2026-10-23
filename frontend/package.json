@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "gen:api": "(cd ../backend && uv run python -m app.openapi) > openapi.json && openapi-ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.104.5",
@@ -15,6 +17,7 @@
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@hey-api/openapi-ts": "^0.99.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
@@ -23,6 +26,7 @@
     "oxlint": "^1.88.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.3",
-    "vite": "^8.3.4"
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
   }
 }

@@ -11,6 +11,8 @@
 
 # Gotchas
 
+- After changing any endpoint or Pydantic schema, run `npm run gen:api` in `frontend/` and commit the regenerated `openapi.json` and `src/api/generated/` (never edit generated files by hand).
+
 - Postgres runs on host port **5434** (5432 is a local Postgres, 5433 is another project's container).
 - Node 22 via nvm (`.nvmrc`); the machine's default Node is 16, so run `nvm use` before npm commands.
 - macOS 12 is unsupported by Homebrew: don't install tools with `brew` (it builds from source and can break openssl for other projects). Use official standalone installers.
