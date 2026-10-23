@@ -1,13 +1,13 @@
-from typing import Annotated
-
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from pydantic import BaseModel
 from sqlalchemy import text
-from sqlalchemy.orm import Session
 
-from app.db import get_session
+from app.db import SessionDep
+from app.routers import categories, expenses
 
 app = FastAPI(title="Family Finances API")
+app.include_router(categories.router)
+app.include_router(expenses.router)
 
 
 class Health(BaseModel):
@@ -16,6 +16,6 @@ class Health(BaseModel):
 
 
 @app.get("/api/health", response_model=Health)
-def health(session: Annotated[Session, Depends(get_session)]) -> Health:
+def health(session: SessionDep) -> Health:
     session.execute(text("SELECT 1"))
     return Health(status="ok", database="ok")

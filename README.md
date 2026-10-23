@@ -23,6 +23,8 @@ docker compose up -d          # Postgres on localhost:5434
 
 cd backend
 uv sync
+uv run alembic upgrade head      # apply migrations
+uv run python -m app.seed        # default categories
 uv run fastapi dev app/main.py   # http://localhost:8000/docs
 
 cd ../frontend
@@ -30,7 +32,9 @@ npm install
 npm run dev                      # http://localhost:5173
 ```
 
-Backend tests: `cd backend && uv run pytest` (needs the database running).
+Backend tests: `cd backend && uv run pytest` (needs the database running; the suite creates and migrates its own `family_finances_test` database).
+
+New migration after changing `app/models.py`: `uv run alembic revision --autogenerate -m "describe the change"`, then review the generated file before committing.
 
 ## Roadmap
 
