@@ -93,3 +93,43 @@ Alembic compara `models.py` con la base de datos y escribe la migración. **Rev�
 1. `spent_on` tiene por defecto `date.today()` **en el servidor**. Si la familia apunta un gasto a las 00:30 en España y el servidor está en UTC, ¿qué fecha se guarda? ¿Por qué el comentario dice que el cliente debería mandar la fecha?
 2. `create_expense` comprueba que la categoría existe antes de insertar, aunque la clave foránea ya lo impediría. ¿Qué vería el cliente sin esa comprobación?
 3. Sin `selectinload`, ¿cuántas consultas haría `GET /api/expenses` con 50 gastos?
+
+## Conceptos del PR 3: el frontend en React
+
+| Rails | React | En este repo |
+|---|---|---|
+| vista / partial | componente (una función que devuelve JSX) | `src/components/` |
+| locals de un partial | props | `<ExpenseList month={month} />` |
+| `@expenses = Expense.all` en el controlador | `useQuery` (estado del servidor) | `src/api/queries.ts` |
+| `form_with` + `create` + redirect | `useMutation` + invalidar la caché | `useCreateExpense` |
+| helpers (`number_to_currency`) | funciones puras en `lib/` | `src/lib/money.ts` |
+| cliente HTTP a mano | cliente generado desde el OpenAPI | `src/api/generated/` |
+
+### Un componente es una función que se vuelve a ejecutar
+`ExpenseList` es una función. React la llama cada vez que cambia algo de lo que depende (sus props o los datos de su query) y actualiza en el DOM solo lo que ha cambiado. Por eso el total del mes se **calcula** en cada render (`reduce`) en lugar de guardarse aparte: si lo guardaras como estado, tendrías que mantenerlo sincronizado a mano. Regla: **si algo se puede calcular a partir de otro dato, no es estado.**
+
+### Dos tipos de estado
+- **Estado del servidor** (los gastos, las categorías): vive en la API, y en el navegador hay una copia en caché. Lo gestiona **TanStack Query**: pide los datos, los guarda en caché por `queryKey`, los vuelve a pedir cuando hace falta y te da `isPending`, `isError` y `data`. Nunca lo copies a un `useState`.
+- **Estado del cliente** (el mes elegido, el error del importe): solo existe en la pantalla. Se guarda con `useState`.
+
+Es el concepto más importante del frontend. Casi todos los bugs típicos de React vienen de mezclar los dos.
+
+### `queryKey` e invalidación
+`['expenses', '2026-10']` identifica una lista en caché. Al crear un gasto, `invalidateQueries({ queryKey: ['expenses'] })` marca como caducadas **todas** las listas de gastos, sea cual sea su mes, y la que está en pantalla se vuelve a pedir sola. Es el equivalente a `redirect_to expenses_path` tras un create, pero sin recargar la página.
+
+### Por qué no hay ningún `useEffect`
+La forma antigua de cargar datos era `useEffect(() => { fetch(...).then(setExpenses) }, [])`. Aparecían condiciones de carrera, no había caché y había que gestionar a mano los estados de carga y de error. `useQuery` resuelve todo eso. Si en un PR ves un `useEffect`, pregunta por qué.
+
+### Formulario no controlado
+Los inputs del formulario no están atados a ningún estado de React. Al enviar, `new FormData(form)` lee lo que el usuario ha escrito, como en un formulario HTML de toda la vida. Tiene menos código y menos renders. Cuando los formularios crezcan (edición o validación compleja), pasaremos a `react-hook-form` + `zod`.
+
+### El cliente generado
+`npm run gen:api` pide el OpenAPI al backend y genera `listExpenses()`, `createExpense()` y los tipos `ExpenseRead` y `ExpenseCreate`. Si en el backend cambias `amount_cents` y regeneras, TypeScript marca cada sitio del frontend que se ha roto. **El backend es la única fuente de verdad de los tipos.** Los nombres limpios salen de `operation_id` en `backend/app/main.py`.
+
+### El dinero, solo en los bordes
+El usuario escribe "12,50". `parseAmountToCents` lo convierte en `1250` trabajando con los dígitos del texto, nunca con floats, y `formatCents` lo vuelve a mostrar como "12,50 €". En medio, todo son enteros (ADR 0002).
+
+## Preguntas para revisar el PR 3
+1. El formulario manda `spent_on` con `todayISO()` del navegador. ¿Resuelve esto la pregunta 1 del PR 2? ¿Por qué `new Date().toISOString().slice(0, 10)` sería un error?
+2. Si guardas un gasto con fecha de septiembre mientras ves octubre, ¿se actualiza la lista de septiembre? ¿Cuándo se vuelve a pedir?
+3. En `ExpenseList`, ¿por qué el `key` de cada `<li>` es `expense.id` y no la posición en la lista?

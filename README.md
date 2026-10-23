@@ -32,6 +32,8 @@ npm install
 npm run dev                      # http://localhost:5173
 ```
 
+Frontend tests: `cd frontend && npm test`. After changing the API, regenerate the typed client with `npm run gen:api`.
+
 Backend tests: `cd backend && uv run pytest` (needs the database running; the suite creates and migrates its own `family_finances_test` database).
 
 New migration after changing `app/models.py`: `uv run alembic revision --autogenerate -m "describe the change"`, then review the generated file before committing.

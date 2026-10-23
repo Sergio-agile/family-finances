@@ -1,0 +1,3 @@
+# Collapsed in GitHub diffs: regenerate with `npm run gen:api`, never edit by hand.
+frontend/openapi.json linguist-generated=true
+frontend/src/api/generated/** linguist-generated=true
