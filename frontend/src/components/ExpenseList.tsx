@@ -66,13 +66,7 @@ export function ExpenseList({ month }: { month: string }) {
         </div>
       ))}
 
-      {editing && (
-        <EditExpenseDialog
-          key={editing.id}
-          expense={editing}
-          onClose={() => setEditing(null)}
-        />
-      )}
+      {editing && <EditExpenseDialog expense={editing} onClose={() => setEditing(null)} />}
     </section>
   )
 }

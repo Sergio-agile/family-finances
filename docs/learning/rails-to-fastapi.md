@@ -229,10 +229,10 @@ La comprobación de "¿existe esta categoría / este tipo?" estaba escrita dos v
 - **Reutilizar el formulario**: `ExpenseForm` sin `expense` crea y con `expense` edita. Cambian los valores iniciales, la mutación y el texto del botón; la validación y el diseño son los mismos.
 - **`<dialog>` nativo**: `showModal()` ya trae el fondo oscuro, la tecla Escape, el foco atrapado dentro y la accesibilidad. No hace falta ninguna librería de modales.
 - **Ref callback en lugar de `useEffect`**: para abrir el diálogo hay que llamar a `showModal()` cuando ya existe en el DOM. El `ref={(dialog) => …}` se ejecuta justo en ese momento. El padre solo decide si lo pinta (`{editing && …}`).
-- **`key={editing.id}`**: el formulario es no controlado, así que `defaultValue` solo se aplica al montarlo. Con un `key` distinto por gasto, React monta un formulario nuevo para cada uno en lugar de reutilizar el anterior con los valores viejos.
+- **Montar y desmontar**: el formulario es no controlado, así que `defaultValue` solo se aplica al montarlo. Funciona porque al cerrar el diálogo `editing` vuelve a `null` y React lo desmonta: cada gasto que abres monta un formulario nuevo con sus valores.
 
 ## Preguntas para revisar el PATCH
 1. ¿Qué pasaría si quitásemos `exclude_unset=True` y el frontend enviase solo `{"spending_type_id": 3}`?
 2. ¿Por qué un `amount_cents: null` devuelve 422 y no 500? ¿Qué devolvería sin `reject_null`?
 3. El PATCH hace hasta 5 consultas (gasto, categoría, tipo, update y la recarga). ¿Merece la pena optimizarlo para un formulario que se envía a mano, o sería optimizar antes de tiempo?
-4. Si quitas `key={editing.id}` del diálogo, abres un gasto, lo cierras y abres otro, ¿qué valores ves en el formulario? (pista: con el diálogo cerrado el componente se desmonta, ¿cambia eso la respuesta?)
+4. Si el diálogo estuviera siempre montado y solo cambiáramos la prop `expense`, ¿qué valores verías al abrir un segundo gasto? ¿Cómo lo arreglarías con `key`?
