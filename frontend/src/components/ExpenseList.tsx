@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useExpenses } from '../api/queries'
 import type { ExpenseRead } from '../api/generated'
 import { formatDay } from '../lib/dates'
 import { formatCents } from '../lib/money'
+import { EditExpenseDialog } from './EditExpenseDialog'
 
 /** Groups expenses by day, keeping the API's newest-first order. */
 function groupByDay(expenses: ExpenseRead[]): [string, ExpenseRead[]][] {
@@ -14,6 +16,7 @@ function groupByDay(expenses: ExpenseRead[]): [string, ExpenseRead[]][] {
 
 export function ExpenseList({ month }: { month: string }) {
   const expenses = useExpenses(month)
+  const [editing, setEditing] = useState<ExpenseRead | null>(null)
 
   if (expenses.isPending) return <p className="text-center text-gray-500">Cargando gastos…</p>
   if (expenses.isError)
@@ -36,24 +39,40 @@ export function ExpenseList({ month }: { month: string }) {
       {groupByDay(expenses.data).map(([day, dayExpenses]) => (
         <div key={day}>
           <h3 className="mb-1 text-sm font-medium text-gray-500 first-letter:uppercase">{formatDay(day)}</h3>
-          <ul className="divide-y divide-gray-100 rounded-2xl bg-white shadow-sm">
+          <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl bg-white shadow-sm">
             {dayExpenses.map((expense) => (
-              <li key={expense.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{expense.concept}</p>
-                  <p className="text-sm text-gray-500">
-                    {expense.category.name}
-                    {expense.spending_type && ` · ${expense.spending_type.name}`}
+              <li key={expense.id}>
+                <button
+                  type="button"
+                  onClick={() => setEditing(expense)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{expense.concept}</p>
+                    <p className="text-sm text-gray-500">
+                      {expense.category.name} ·{' '}
+                      {expense.spending_type?.name ?? (
+                        <span className="text-amber-600">Sin clasificar</span>
+                      )}
+                    </p>
+                  </div>
+                  <p className="shrink-0 font-semibold tabular-nums">
+                    {formatCents(expense.amount_cents)}
                   </p>
-                </div>
-                <p className="shrink-0 font-semibold tabular-nums">
-                  {formatCents(expense.amount_cents)}
-                </p>
+                </button>
               </li>
             ))}
           </ul>
         </div>
       ))}
+
+      {editing && (
+        <EditExpenseDialog
+          key={editing.id}
+          expense={editing}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </section>
   )
 }

@@ -1,16 +1,25 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { useCategories, useCreateExpense, useSpendingTypes } from '../api/queries'
+import { useCategories, useCreateExpense, useSpendingTypes, useUpdateExpense } from '../api/queries'
+import type { ExpenseCreate, ExpenseRead } from '../api/generated'
 import { todayISO } from '../lib/dates'
-import { parseAmountToCents } from '../lib/money'
+import { centsToInput, parseAmountToCents } from '../lib/money'
 
 const inputClass =
   'h-11 w-full rounded-lg border border-gray-300 bg-white px-3 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20'
 
-export function ExpenseForm() {
+type Props = {
+  /** When given, the form edits this expense instead of creating a new one. */
+  expense?: ExpenseRead
+  onSaved?: () => void
+}
+
+export function ExpenseForm({ expense, onSaved }: Props) {
   const categories = useCategories()
   const spendingTypes = useSpendingTypes()
   const createExpense = useCreateExpense()
+  const updateExpense = useUpdateExpense()
+  const mutation = expense ? updateExpense : createExpense
   const [amountError, setAmountError] = useState<string | null>(null)
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -27,16 +36,24 @@ export function ExpenseForm() {
     // Optional: the empty option means "not classified yet".
     const spendingTypeId = data.get('spending_type_id')
 
-    createExpense.mutate(
-      {
-        amount_cents: amountCents,
-        concept: String(data.get('concept')),
-        category_id: Number(data.get('category_id')),
-        spending_type_id: spendingTypeId ? Number(spendingTypeId) : null,
-        spent_on: String(data.get('spent_on')),
-      },
-      { onSuccess: () => form.reset() },
-    )
+    const values: ExpenseCreate = {
+      amount_cents: amountCents,
+      concept: String(data.get('concept')),
+      category_id: Number(data.get('category_id')),
+      spending_type_id: spendingTypeId ? Number(spendingTypeId) : null,
+      spent_on: String(data.get('spent_on')),
+    }
+
+    if (expense) {
+      updateExpense.mutate({ id: expense.id, changes: values }, { onSuccess: onSaved })
+    } else {
+      createExpense.mutate(values, {
+        onSuccess: () => {
+          form.reset()
+          onSaved?.()
+        },
+      })
+    }
   }
 
   return (
@@ -50,6 +67,7 @@ export function ExpenseForm() {
             placeholder="0,00"
             autoComplete="off"
             required
+            defaultValue={expense && centsToInput(expense.amount_cents)}
             aria-invalid={amountError !== null}
             className="w-full bg-transparent py-2 text-4xl font-semibold tabular-nums focus:outline-none"
           />
@@ -60,7 +78,13 @@ export function ExpenseForm() {
 
       <label className="block">
         <span className="mb-1 block text-sm font-medium text-gray-700">Concepto</span>
-        <input name="concept" required maxLength={200} className={inputClass} />
+        <input
+          name="concept"
+          required
+          maxLength={200}
+          defaultValue={expense?.concept}
+          className={inputClass}
+        />
       </label>
 
       <div className="grid grid-cols-2 gap-3">
@@ -70,7 +94,7 @@ export function ExpenseForm() {
             name="category_id"
             required
             disabled={!categories.isSuccess}
-            defaultValue=""
+            defaultValue={expense?.category.id ?? ''}
             className={inputClass}
           >
             <option value="" disabled>
@@ -90,7 +114,7 @@ export function ExpenseForm() {
             name="spent_on"
             type="date"
             required
-            defaultValue={todayISO()}
+            defaultValue={expense?.spent_on ?? todayISO()}
             className={inputClass}
           />
         </label>
@@ -103,7 +127,7 @@ export function ExpenseForm() {
         <select
           name="spending_type_id"
           disabled={!spendingTypes.isSuccess}
-          defaultValue=""
+          defaultValue={expense?.spending_type?.id ?? ''}
           className={inputClass}
         >
           <option value="">{spendingTypes.isPending ? 'Cargando…' : 'Sin clasificar'}</option>
@@ -115,16 +139,16 @@ export function ExpenseForm() {
         </select>
       </label>
 
-      {createExpense.isError && (
+      {mutation.isError && (
         <p className="text-sm text-red-600">No se ha podido guardar el gasto. Inténtalo de nuevo.</p>
       )}
 
       <button
         type="submit"
-        disabled={createExpense.isPending}
+        disabled={mutation.isPending}
         className="w-full rounded-lg bg-emerald-600 py-3 font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
       >
-        {createExpense.isPending ? 'Guardando…' : 'Añadir gasto'}
+        {mutation.isPending ? 'Guardando…' : expense ? 'Guardar cambios' : 'Añadir gasto'}
       </button>
     </form>
   )
