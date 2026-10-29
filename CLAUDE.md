@@ -5,6 +5,18 @@
 - Record significant technical decisions as ADRs in `docs/decisions/`.
 - Never push to `main`: one branch per change, opened as a PR.
 
+# Engineering principles
+
+Non-negotiable for every change, backend and frontend:
+
+- **Conventions first.** Follow the idiomatic, senior-level conventions of each tool (FastAPI, SQLAlchemy 2.0, Pydantic v2, React, TanStack Query, Tailwind) before inventing anything. If a decision departs from convention, justify it in an ADR.
+- **Reuse before writing.** Look for an existing helper, component, fixture or pattern and extend it; extract shared code as soon as something repeats. No copy-paste.
+- **Performance is a feature.** Keep it as light as possible:
+  - Backend: no N+1 (eager-load relationships), index what we filter or join on, paginate or bound lists, push aggregation into SQL instead of Python.
+  - Frontend: few and small dependencies, watch the bundle size, cache server state with TanStack Query instead of refetching, avoid needless re-renders and `useEffect`.
+- **Optimized, minimal code.** The simplest correct solution with the fewest moving parts; no speculative abstractions.
+- In every PR description, call out any performance impact (new queries, indexes, bundle size).
+
 # Safety
 
 - The repo is public. Never commit `.env`, API keys, or real financial data (bank exports, real movements). Demo data must be invented.
