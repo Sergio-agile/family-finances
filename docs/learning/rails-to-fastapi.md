@@ -194,3 +194,32 @@ Sin convención, SQLAlchemy deja las foreign keys sin nombre y Postgres les pone
 ## Preguntas para revisar el refactor
 1. Si mañana queremos un endpoint con los totales de todo el año, ¿lo haríamos quitando el límite de `GET /api/expenses` o con un endpoint aparte que agregue en SQL? ¿Por qué?
 2. ¿Por qué hacer `month` obligatorio no rompe el frontend, y cómo nos habríamos enterado si lo rompiera?
+
+## Conceptos del PATCH de gastos
+
+| Rails | Python / FastAPI | En este repo |
+|---|---|---|
+| `resources :expenses, only: :update` | `@router.patch("/{expense_id}")` | `update_expense` |
+| `Expense.find(params[:id])` → 404 automático | `session.get(Expense, id)` + `HTTPException(404)` a mano | |
+| `expense_params` con `permit` | esquema `ExpenseUpdate`, todos los campos opcionales | `app/schemas.py` |
+| `expense.update(expense_params)` | `model_dump(exclude_unset=True)` + `setattr` | |
+| método privado del controlador | función normal en el router | `ensure_references_exist` |
+
+### `exclude_unset`: "no enviado" no es lo mismo que `null`
+En un PATCH hay tres casos por campo, y hay que distinguirlos:
+- **No lo envías**: no se toca. `exclude_unset=True` lo deja fuera del diccionario de cambios.
+- **Lo envías con valor**: se actualiza.
+- **Lo envías como `null`**: se borra el valor. Solo tiene sentido en `spending_type_id` ("deja este gasto sin clasificar"). En el resto de campos la columna es `NOT NULL`, y el `field_validator` `reject_null` devuelve un 422 en lugar de dejar que Postgres falle con un 500.
+
+En Rails `permit` hace lo primero sin que lo pienses. Aquí es explícito porque Pydantic rellena con `None` los campos omitidos, y sin `exclude_unset` un PATCH con solo el concepto pondría a `NULL` todo lo demás.
+
+### Reutilizar al segundo uso
+La comprobación de "¿existe esta categoría / este tipo?" estaba escrita dos veces dentro de `create_expense`, y el PATCH la necesitaba igual. Ahora es `ensure_references_exist` y la usan los dos endpoints. Recibe `Session` y no `SessionDep`: `SessionDep` es para que FastAPI **inyecte** la sesión en un endpoint, mientras que a una función normal se la pasas tú.
+
+### `parametrize`: una tabla de casos
+`@pytest.mark.parametrize` ejecuta el mismo test con cada fila de datos. Es el equivalente a recorrer una tabla con `.each` en RSpec, pero cada fila sale como un test independiente en el informe.
+
+## Preguntas para revisar el PATCH
+1. ¿Qué pasaría si quitásemos `exclude_unset=True` y el frontend enviase solo `{"spending_type_id": 3}`?
+2. ¿Por qué un `amount_cents: null` devuelve 422 y no 500? ¿Qué devolvería sin `reject_null`?
+3. El PATCH hace hasta 5 consultas (gasto, categoría, tipo, update y la recarga). ¿Merece la pena optimizarlo para un formulario que se envía a mano, o sería optimizar antes de tiempo?
