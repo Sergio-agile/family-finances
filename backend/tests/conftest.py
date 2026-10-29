@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db import get_session
 from app.main import app
-from app.models import Category
+from app.models import Category, SpendingType
 
 # Like Rails: a separate test database, next to the development one.
 TEST_DATABASE_URL = make_url(settings.database_url).set(database="family_finances_test")
@@ -67,3 +67,11 @@ def groceries(session) -> Category:
     session.add(category)
     session.flush()
     return category
+
+
+@pytest.fixture
+def ant_spending(session) -> SpendingType:
+    spending_type = SpendingType(name="Gasto hormiga")
+    session.add(spending_type)
+    session.flush()
+    return spending_type

@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateExpenseData, CreateExpenseErrors, CreateExpenseResponses, HealthData, HealthResponses, ListCategoriesData, ListCategoriesResponses, ListExpensesData, ListExpensesErrors, ListExpensesResponses } from './types.gen';
+import type { CreateExpenseData, CreateExpenseErrors, CreateExpenseResponses, HealthData, HealthResponses, ListCategoriesData, ListCategoriesResponses, ListExpensesData, ListExpensesErrors, ListExpensesResponses, ListSpendingTypesData, ListSpendingTypesResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -41,6 +41,13 @@ export const createExpense = <ThrowOnError extends boolean = false>(options: Opt
         ...options.headers
     }
 });
+
+/**
+ * List Spending Types
+ *
+ * In seed order, which goes from essential to optional spending, not alphabetically.
+ */
+export const listSpendingTypes = <ThrowOnError extends boolean = false>(options?: Options<ListSpendingTypesData, ThrowOnError>): RequestResult<ListSpendingTypesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListSpendingTypesResponses, unknown, ThrowOnError>({ url: '/api/spending-types', ...options });
 
 /**
  * Health

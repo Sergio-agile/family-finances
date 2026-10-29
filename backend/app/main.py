@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy import text
 
 from app.db import SessionDep
-from app.routers import categories, expenses
+from app.routers import categories, expenses, spending_types
 
 
 def operation_id(route: APIRoute) -> str:
@@ -16,6 +16,7 @@ def operation_id(route: APIRoute) -> str:
 app = FastAPI(title="Family Finances API", generate_unique_id_function=operation_id)
 app.include_router(categories.router)
 app.include_router(expenses.router)
+app.include_router(spending_types.router)
 
 
 class Health(BaseModel):

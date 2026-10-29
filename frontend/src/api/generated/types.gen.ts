@@ -37,6 +37,10 @@ export type ExpenseCreate = {
      */
     category_id: number;
     /**
+     * Spending Type Id
+     */
+    spending_type_id?: number | null;
+    /**
      * Spent On
      */
     spent_on?: string;
@@ -63,6 +67,7 @@ export type ExpenseRead = {
      */
     spent_on: string;
     category: CategoryRead;
+    spending_type: SpendingTypeRead | null;
     /**
      * Created At
      */
@@ -91,6 +96,20 @@ export type Health = {
      * Database
      */
     database: string;
+};
+
+/**
+ * SpendingTypeRead
+ */
+export type SpendingTypeRead = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Name
+     */
+    name: string;
 };
 
 /**
@@ -195,6 +214,24 @@ export type CreateExpenseResponses = {
 };
 
 export type CreateExpenseResponse = CreateExpenseResponses[keyof CreateExpenseResponses];
+
+export type ListSpendingTypesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/spending-types';
+};
+
+export type ListSpendingTypesResponses = {
+    /**
+     * Response List Spending Types
+     *
+     * Successful Response
+     */
+    200: Array<SpendingTypeRead>;
+};
+
+export type ListSpendingTypesResponse = ListSpendingTypesResponses[keyof ListSpendingTypesResponses];
 
 export type HealthData = {
     body?: never;

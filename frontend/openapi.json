@@ -127,6 +127,32 @@
         }
       }
     },
+    "/api/spending-types": {
+      "get": {
+        "tags": [
+          "spending types"
+        ],
+        "summary": "List Spending Types",
+        "description": "In seed order, which goes from essential to optional spending, not alphabetically.",
+        "operationId": "list_spending_types",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SpendingTypeRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Spending Types"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "summary": "Health",
@@ -184,6 +210,17 @@
             "type": "integer",
             "title": "Category Id"
           },
+          "spending_type_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spending Type Id"
+          },
           "spent_on": {
             "type": "string",
             "format": "date",
@@ -220,6 +257,16 @@
           "category": {
             "$ref": "#/components/schemas/CategoryRead"
           },
+          "spending_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SpendingTypeRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -233,6 +280,7 @@
           "concept",
           "spent_on",
           "category",
+          "spending_type",
           "created_at"
         ],
         "title": "ExpenseRead"
@@ -267,6 +315,24 @@
           "database"
         ],
         "title": "Health"
+      },
+      "SpendingTypeRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "SpendingTypeRead"
       },
       "ValidationError": {
         "properties": {

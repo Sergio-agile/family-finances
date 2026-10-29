@@ -133,3 +133,43 @@ El usuario escribe "12,50". `parseAmountToCents` lo convierte en `1250` trabajan
 1. El formulario manda `spent_on` con `todayISO()` del navegador. ¿Resuelve esto la pregunta 1 del PR 2? ¿Por qué `new Date().toISOString().slice(0, 10)` sería un error?
 2. Si guardas un gasto con fecha de septiembre mientras ves octubre, ¿se actualiza la lista de septiembre? ¿Cuándo se vuelve a pedir?
 3. En `ExpenseList`, ¿por qué el `key` de cada `<li>` es `expense.id` y no la posición en la lista?
+
+## Conceptos del PR 4: tipo de gasto (una relación opcional)
+
+| Rails | Python / FastAPI | En este repo |
+|---|---|---|
+| `belongs_to :spending_type, optional: true` | `Mapped[int \| None]` + `Mapped[SpendingType \| None]` | `Expense.spending_type` |
+| segunda migración (`add_reference`) | `alembic revision --autogenerate`, encadenada con `down_revision` | `migrations/versions/` |
+| `params.permit(:spending_type_id)` opcional | `spending_type_id: int \| None = None` | `ExpenseCreate` |
+| `rails db:rollback` | `alembic downgrade -1` | |
+
+### Opcional en tres capas
+En Rails basta con `optional: true`. Aquí hay que decirlo en cada capa, y cada una significa una cosa distinta:
+- **Modelo**: `Mapped[int | None]` hace que la columna admita NULL.
+- **Esquema de entrada**: `int | None = None`. El `= None` es lo que hace que el campo se pueda **omitir** en el JSON. Sin él, sería obligatorio enviarlo, aunque fuera con `null`.
+- **Esquema de salida**: `SpendingTypeRead | None`, **sin** valor por defecto, porque la respuesta siempre incluye la clave: con el objeto, o con `null`.
+
+### Las migraciones se encadenan
+Cada migración apunta a la anterior con `down_revision`. Es el equivalente al timestamp del nombre de fichero en Rails, pero explícito: Alembic recorre la cadena para saber qué falta por aplicar.
+
+### Revisar la migración autogenerada (otra vez)
+Alembic creó la clave foránea **sin nombre** (`None`), y su propio comentario avisaba de que el `downgrade` fallaría. Le he puesto el nombre a mano y he probado `upgrade`, `downgrade -1` y `upgrade` otra vez. Rails pone nombre a las claves foráneas automáticamente; Alembic no, salvo que configures una *naming convention* en `Base.metadata`.
+
+## Preguntas para revisar el PR 4
+1. ¿Qué pasaría si `ExpenseCreate` tuviera `spending_type_id: int | None` sin el `= None`? ¿Seguiría funcionando el frontend actual, que no envía ese campo?
+2. `list_spending_types` ordena por `id` y no por nombre, como hacen las categorías. ¿Qué pasa con ese orden si mañana se añade un sexto tipo que debería ir entre "Gastos básicos" y "Educación"?
+3. ¿Merece la pena configurar una naming convention en `Base.metadata` para no tener que poner nombres a mano en cada migración?
+
+## Conceptos del PR 5: el tipo de gasto en el frontend
+
+No hay piezas nuevas: `useSpendingTypes` es igual que `useCategories`. Lo interesante es cómo viaja un campo **opcional** desde un `<select>`.
+
+### `""` no es `null`
+Un `<select>` siempre tiene valor: la opción "Sin clasificar" manda la cadena vacía `""`. Si la enviáramos tal cual, Pydantic intentaría convertir `""` en un `int` y devolvería un 422. Por eso el formulario traduce `""` a `null` antes de llamar a la API. En Rails pasa lo mismo, pero ActiveRecord lo disimula: convierte `""` en `nil` al asignarlo a una columna integer.
+
+### TypeScript avisa si te olvidas
+Al regenerar el cliente en el PR 4, `ExpenseRead.spending_type` pasó a ser `SpendingTypeRead | null`. Si escribes `expense.spending_type.name` sin comprobar antes que no es `null`, `tsc` da error. Es lo que en Ruby sería un `NoMethodError` en producción, aquí detectado al compilar.
+
+## Preguntas para revisar el PR 5
+1. ¿Qué pasaría si quitásemos el `spendingTypeId ? … : null` y mandásemos `Number(data.get('spending_type_id'))`? (pista: `Number("")`)
+2. En la lista, los gastos sin tipo no muestran nada. ¿Preferirías ver "Sin clasificar" para detectarlos de un vistazo, ahora que vamos a poder editarlos?

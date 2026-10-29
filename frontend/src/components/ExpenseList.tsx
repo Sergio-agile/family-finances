@@ -41,7 +41,10 @@ export function ExpenseList({ month }: { month: string }) {
               <li key={expense.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
                   <p className="truncate font-medium">{expense.concept}</p>
-                  <p className="text-sm text-gray-500">{expense.category.name}</p>
+                  <p className="text-sm text-gray-500">
+                    {expense.category.name}
+                    {expense.spending_type && ` · ${expense.spending_type.name}`}
+                  </p>
                 </div>
                 <p className="shrink-0 font-semibold tabular-nums">
                   {formatCents(expense.amount_cents)}
