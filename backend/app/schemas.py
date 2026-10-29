@@ -13,10 +13,18 @@ class CategoryRead(BaseModel):
     name: str
 
 
+class SpendingTypeRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+
+
 class ExpenseCreate(BaseModel):
     amount_cents: int = Field(gt=0, description="Amount in cents: 12.50 € is 1250")
     concept: Concept
     category_id: int
+    spending_type_id: int | None = None
     # Fallback only: the client should send the date in the user's own timezone.
     spent_on: date = Field(default_factory=date.today)
 
@@ -29,4 +37,5 @@ class ExpenseRead(BaseModel):
     concept: str
     spent_on: date
     category: CategoryRead
+    spending_type: SpendingTypeRead | None
     created_at: datetime

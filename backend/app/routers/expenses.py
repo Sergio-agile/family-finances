@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.db import SessionDep
-from app.models import Category, Expense
+from app.models import Category, Expense, SpendingType
 from app.schemas import ExpenseCreate, ExpenseRead
 
 router = APIRouter(prefix="/api/expenses", tags=["expenses"])
@@ -19,7 +19,7 @@ def list_expenses(session: SessionDep, month: Month = None) -> list[Expense]:
     """Expenses, newest first. Optionally only those of one month (YYYY-MM)."""
     query = (
         select(Expense)
-        .options(selectinload(Expense.category))
+        .options(selectinload(Expense.category), selectinload(Expense.spending_type))
         .order_by(Expense.spent_on.desc(), Expense.id.desc())
     )
     if month:
@@ -34,6 +34,11 @@ def list_expenses(session: SessionDep, month: Month = None) -> list[Expense]:
 def create_expense(payload: ExpenseCreate, session: SessionDep) -> Expense:
     if session.get(Category, payload.category_id) is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Category does not exist")
+    if (
+        payload.spending_type_id is not None
+        and session.get(SpendingType, payload.spending_type_id) is None
+    ):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Spending type does not exist")
 
     expense = Expense(**payload.model_dump())
     session.add(expense)
