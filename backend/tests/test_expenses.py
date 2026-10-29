@@ -129,7 +129,7 @@ def test_lists_the_spending_type_of_each_expense(client, session, groceries, ant
     )
     session.flush()
 
-    response = client.get("/api/expenses")
+    response = client.get("/api/expenses", params={"month": "2026-10"})
 
     assert [e["spending_type"] for e in response.json()] == [
         {"id": ant_spending.id, "name": "Gasto hormiga"},
@@ -159,6 +159,12 @@ def test_month_filter_handles_december(client, session, groceries):
     response = client.get("/api/expenses", params={"month": "2026-12"})
 
     assert [e["concept"] for e in response.json()] == ["Nochevieja"]
+
+
+def test_requires_a_month(client):
+    response = client.get("/api/expenses")
+
+    assert response.status_code == 422
 
 
 def test_rejects_malformed_month(client):

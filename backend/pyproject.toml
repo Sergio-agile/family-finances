@@ -25,7 +25,8 @@ package = false
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM"]
+# FAST: FastAPI, PT: pytest, PERF: performance anti-patterns, RUF: Ruff's own rules.
+select = ["E", "F", "I", "UP", "B", "SIM", "FAST", "PT", "PERF", "RUF"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

@@ -24,7 +24,7 @@ class Health(BaseModel):
     database: str
 
 
-@app.get("/api/health", response_model=Health)
+@app.get("/api/health")
 def health(session: SessionDep) -> Health:
     session.execute(text("SELECT 1"))
     return Health(status="ok", database="ok")
