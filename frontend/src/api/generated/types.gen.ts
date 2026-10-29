@@ -75,6 +75,34 @@ export type ExpenseRead = {
 };
 
 /**
+ * ExpenseUpdate
+ *
+ * Partial update: only the fields sent are changed. `spending_type_id: null` unclassifies.
+ */
+export type ExpenseUpdate = {
+    /**
+     * Amount Cents
+     */
+    amount_cents?: number | null;
+    /**
+     * Concept
+     */
+    concept?: string | null;
+    /**
+     * Category Id
+     */
+    category_id?: number | null;
+    /**
+     * Spending Type Id
+     */
+    spending_type_id?: number | null;
+    /**
+     * Spent On
+     */
+    spent_on?: string | null;
+};
+
+/**
  * HTTPValidationError
  */
 export type HttpValidationError = {
@@ -214,6 +242,36 @@ export type CreateExpenseResponses = {
 };
 
 export type CreateExpenseResponse = CreateExpenseResponses[keyof CreateExpenseResponses];
+
+export type UpdateExpenseData = {
+    body: ExpenseUpdate;
+    path: {
+        /**
+         * Expense Id
+         */
+        expense_id: number;
+    };
+    query?: never;
+    url: '/api/expenses/{expense_id}';
+};
+
+export type UpdateExpenseErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateExpenseError = UpdateExpenseErrors[keyof UpdateExpenseErrors];
+
+export type UpdateExpenseResponses = {
+    /**
+     * Successful Response
+     */
+    200: ExpenseRead;
+};
+
+export type UpdateExpenseResponse = UpdateExpenseResponses[keyof UpdateExpenseResponses];
 
 export type ListSpendingTypesData = {
     body?: never;

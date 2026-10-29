@@ -4,7 +4,9 @@ import {
   listCategories,
   listExpenses,
   listSpendingTypes,
+  updateExpense,
   type ExpenseCreate,
+  type ExpenseUpdate,
 } from './generated'
 
 // Server state lives here: components ask for data, TanStack Query fetches, caches and refetches.
@@ -40,6 +42,17 @@ export function useCreateExpense() {
     mutationFn: async (expense: ExpenseCreate) =>
       (await createExpense({ body: expense, throwOnError: true })).data,
     // Every cached expense list may now be outdated, whatever month it shows.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['expenses'] }),
+  })
+}
+
+export function useUpdateExpense() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, changes }: { id: number; changes: ExpenseUpdate }) =>
+      (await updateExpense({ path: { expense_id: id }, body: changes, throwOnError: true })).data,
+    // The date may have moved the expense to another month, so refresh every cached list.
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['expenses'] }),
   })
 }

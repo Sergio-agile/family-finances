@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateExpenseData, CreateExpenseErrors, CreateExpenseResponses, HealthData, HealthResponses, ListCategoriesData, ListCategoriesResponses, ListExpensesData, ListExpensesErrors, ListExpensesResponses, ListSpendingTypesData, ListSpendingTypesResponses } from './types.gen';
+import type { CreateExpenseData, CreateExpenseErrors, CreateExpenseResponses, HealthData, HealthResponses, ListCategoriesData, ListCategoriesResponses, ListExpensesData, ListExpensesErrors, ListExpensesResponses, ListSpendingTypesData, ListSpendingTypesResponses, UpdateExpenseData, UpdateExpenseErrors, UpdateExpenseResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -35,6 +35,18 @@ export const listExpenses = <ThrowOnError extends boolean = false>(options: Opti
  */
 export const createExpense = <ThrowOnError extends boolean = false>(options: Options<CreateExpenseData, ThrowOnError>): RequestResult<CreateExpenseResponses, CreateExpenseErrors, ThrowOnError> => (options.client ?? client).post<CreateExpenseResponses, CreateExpenseErrors, ThrowOnError>({
     url: '/api/expenses',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Update Expense
+ */
+export const updateExpense = <ThrowOnError extends boolean = false>(options: Options<UpdateExpenseData, ThrowOnError>): RequestResult<UpdateExpenseResponses, UpdateExpenseErrors, ThrowOnError> => (options.client ?? client).patch<UpdateExpenseResponses, UpdateExpenseErrors, ThrowOnError>({
+    url: '/api/expenses/{expense_id}',
     ...options,
     headers: {
         'Content-Type': 'application/json',

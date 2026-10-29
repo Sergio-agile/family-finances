@@ -14,6 +14,11 @@ export function parseAmountToCents(input: string): number | null {
   return cents > 0 ? cents : null
 }
 
+/** Cents back into what the user would type: 1250 → "12,50". The inverse of parseAmountToCents. */
+export function centsToInput(cents: number): string {
+  return `${Math.trunc(cents / 100)},${String(cents % 100).padStart(2, '0')}`
+}
+
 const euroFormatter = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
 
 export function formatCents(cents: number): string {

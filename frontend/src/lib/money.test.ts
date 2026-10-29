@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatCents, parseAmountToCents } from './money'
+import { centsToInput, formatCents, parseAmountToCents } from './money'
 
 describe('parseAmountToCents', () => {
   it.each([
@@ -25,5 +25,20 @@ describe('formatCents', () => {
   it('formats cents as euros in Spanish style', () => {
     // Intl uses a non-breaking space before the € sign.
     expect(formatCents(123456).replace(/\s/g, ' ')).toBe('1234,56 €')
+  })
+})
+
+describe('centsToInput', () => {
+  it.each([
+    [1250, '12,50'],
+    [1200, '12,00'],
+    [29, '0,29'],
+    [123456, '1234,56'],
+  ])('turns %i cents into %j', (cents, input) => {
+    expect(centsToInput(cents)).toBe(input)
+  })
+
+  it('round-trips with parseAmountToCents', () => {
+    expect(parseAmountToCents(centsToInput(4207))).toBe(4207)
   })
 })
