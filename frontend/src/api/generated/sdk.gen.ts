@@ -26,9 +26,9 @@ export const listCategories = <ThrowOnError extends boolean = false>(options?: O
 /**
  * List Expenses
  *
- * Expenses, newest first. Optionally only those of one month (YYYY-MM).
+ * Expenses of one month (YYYY-MM), newest first.
  */
-export const listExpenses = <ThrowOnError extends boolean = false>(options?: Options<ListExpensesData, ThrowOnError>): RequestResult<ListExpensesResponses, ListExpensesErrors, ThrowOnError> => (options?.client ?? client).get<ListExpensesResponses, ListExpensesErrors, ThrowOnError>({ url: '/api/expenses', ...options });
+export const listExpenses = <ThrowOnError extends boolean = false>(options: Options<ListExpensesData, ThrowOnError>): RequestResult<ListExpensesResponses, ListExpensesErrors, ThrowOnError> => (options.client ?? client).get<ListExpensesResponses, ListExpensesErrors, ThrowOnError>({ url: '/api/expenses', ...options });
 
 /**
  * Create Expense

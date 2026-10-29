@@ -161,11 +161,11 @@ export type ListCategoriesResponse = ListCategoriesResponses[keyof ListCategorie
 export type ListExpensesData = {
     body?: never;
     path?: never;
-    query?: {
+    query: {
         /**
          * Month
          */
-        month?: string | null;
+        month: string;
     };
     url: '/api/expenses';
 };

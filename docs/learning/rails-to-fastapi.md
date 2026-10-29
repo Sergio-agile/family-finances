@@ -173,3 +173,24 @@ Al regenerar el cliente en el PR 4, `ExpenseRead.spending_type` pasó a ser `Spe
 ## Preguntas para revisar el PR 5
 1. ¿Qué pasaría si quitásemos el `spendingTypeId ? … : null` y mandásemos `Number(data.get('spending_type_id'))`? (pista: `Number("")`)
 2. En la lista, los gastos sin tipo no muestran nada. ¿Preferirías ver "Sin clasificar" para detectarlos de un vistazo, ahora que vamos a poder editarlos?
+
+## Refactor de convenciones
+
+| Rails | Python / FastAPI | En este repo |
+|---|---|---|
+| nombres de FK automáticos (`fk_rails_…`) | `naming_convention` en `Base.metadata` | `app/models.py` |
+| `.rubocop.yml` con más cops (`rubocop-rails`, `rubocop-rspec`) | más reglas en `[tool.ruff.lint] select` | `backend/pyproject.toml` |
+
+### Naming convention
+Sin convención, SQLAlchemy deja las foreign keys sin nombre y Postgres les pone uno al crearlas. Alembic no conoce ese nombre, así que el `downgrade` no sabe qué borrar (es lo que nos pasó en la migración de los tipos de gasto). Con la convención, SQLAlchemy decide el nombre y lo escribe en cada migración autogenerada. La he configurado con **los mismos nombres que pone Postgres** (`expenses_category_id_fkey`, `categories_name_key`…), así que la base de datos actual ya cumple y no hace falta ninguna migración. Lo he comprobado comparando los 10 nombres uno a uno.
+
+### Listas siempre acotadas
+`GET /api/expenses` ahora exige `?month=`. Antes, sin el mes, devolvía todos los gastos de la historia: con pocos datos no se nota, pero el tiempo de respuesta y la memoria crecen sin límite. Cuando haya una lista sin límite natural, la acotaremos con paginación.
+
+### Reglas nuevas de Ruff
+- `FAST`: convenciones de FastAPI. Detectó que `/api/health` declaraba el modelo dos veces: con `response_model=Health` y con `-> Health`. Cuando el tipo de retorno ya es el esquema, sobra el `response_model`. En los demás endpoints sí hace falta, porque devuelven un modelo SQLAlchemy y el esquema de salida es otro.
+- `PT`: buenas prácticas de pytest. `PERF`: antipatrones de rendimiento en bucles. `RUF`: reglas propias de Ruff.
+
+## Preguntas para revisar el refactor
+1. Si mañana queremos un endpoint con los totales de todo el año, ¿lo haríamos quitando el límite de `GET /api/expenses` o con un endpoint aparte que agregue en SQL? ¿Por qué?
+2. ¿Por qué hacer `month` obligatorio no rompe el frontend, y cómo nos habríamos enterado si lo rompiera?
