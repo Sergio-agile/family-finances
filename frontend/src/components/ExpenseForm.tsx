@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { useCategories, useCreateExpense } from '../api/queries'
+import { useCategories, useCreateExpense, useSpendingTypes } from '../api/queries'
 import { todayISO } from '../lib/dates'
 import { parseAmountToCents } from '../lib/money'
 
@@ -9,6 +9,7 @@ const inputClass =
 
 export function ExpenseForm() {
   const categories = useCategories()
+  const spendingTypes = useSpendingTypes()
   const createExpense = useCreateExpense()
   const [amountError, setAmountError] = useState<string | null>(null)
 
@@ -23,12 +24,15 @@ export function ExpenseForm() {
       return
     }
     setAmountError(null)
+    // Optional: the empty option means "not classified yet".
+    const spendingTypeId = data.get('spending_type_id')
 
     createExpense.mutate(
       {
         amount_cents: amountCents,
         concept: String(data.get('concept')),
         category_id: Number(data.get('category_id')),
+        spending_type_id: spendingTypeId ? Number(spendingTypeId) : null,
         spent_on: String(data.get('spent_on')),
       },
       { onSuccess: () => form.reset() },
@@ -91,6 +95,25 @@ export function ExpenseForm() {
           />
         </label>
       </div>
+
+      <label className="block">
+        <span className="mb-1 block text-sm font-medium text-gray-700">
+          Tipo de gasto <span className="font-normal text-gray-400">(opcional)</span>
+        </span>
+        <select
+          name="spending_type_id"
+          disabled={!spendingTypes.isSuccess}
+          defaultValue=""
+          className={inputClass}
+        >
+          <option value="">{spendingTypes.isPending ? 'Cargando…' : 'Sin clasificar'}</option>
+          {spendingTypes.data?.map((spendingType) => (
+            <option key={spendingType.id} value={spendingType.id}>
+              {spendingType.name}
+            </option>
+          ))}
+        </select>
+      </label>
 
       {createExpense.isError && (
         <p className="text-sm text-red-600">No se ha podido guardar el gasto. Inténtalo de nuevo.</p>

@@ -1,5 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createExpense, listCategories, listExpenses, type ExpenseCreate } from './generated'
+import {
+  createExpense,
+  listCategories,
+  listExpenses,
+  listSpendingTypes,
+  type ExpenseCreate,
+} from './generated'
 
 // Server state lives here: components ask for data, TanStack Query fetches, caches and refetches.
 // `throwOnError: true` makes failed requests reject, which is what TanStack Query expects.
@@ -9,6 +15,14 @@ export function useCategories() {
     queryKey: ['categories'],
     queryFn: async () => (await listCategories({ throwOnError: true })).data,
     staleTime: Infinity, // categories practically never change during a session
+  })
+}
+
+export function useSpendingTypes() {
+  return useQuery({
+    queryKey: ['spending-types'],
+    queryFn: async () => (await listSpendingTypes({ throwOnError: true })).data,
+    staleTime: Infinity,
   })
 }
 

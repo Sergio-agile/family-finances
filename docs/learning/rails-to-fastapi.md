@@ -159,3 +159,17 @@ Alembic creó la clave foránea **sin nombre** (`None`), y su propio comentario 
 1. ¿Qué pasaría si `ExpenseCreate` tuviera `spending_type_id: int | None` sin el `= None`? ¿Seguiría funcionando el frontend actual, que no envía ese campo?
 2. `list_spending_types` ordena por `id` y no por nombre, como hacen las categorías. ¿Qué pasa con ese orden si mañana se añade un sexto tipo que debería ir entre "Gastos básicos" y "Educación"?
 3. ¿Merece la pena configurar una naming convention en `Base.metadata` para no tener que poner nombres a mano en cada migración?
+
+## Conceptos del PR 5: el tipo de gasto en el frontend
+
+No hay piezas nuevas: `useSpendingTypes` es igual que `useCategories`. Lo interesante es cómo viaja un campo **opcional** desde un `<select>`.
+
+### `""` no es `null`
+Un `<select>` siempre tiene valor: la opción "Sin clasificar" manda la cadena vacía `""`. Si la enviáramos tal cual, Pydantic intentaría convertir `""` en un `int` y devolvería un 422. Por eso el formulario traduce `""` a `null` antes de llamar a la API. En Rails pasa lo mismo, pero ActiveRecord lo disimula: convierte `""` en `nil` al asignarlo a una columna integer.
+
+### TypeScript avisa si te olvidas
+Al regenerar el cliente en el PR 4, `ExpenseRead.spending_type` pasó a ser `SpendingTypeRead | null`. Si escribes `expense.spending_type.name` sin comprobar antes que no es `null`, `tsc` da error. Es lo que en Ruby sería un `NoMethodError` en producción, aquí detectado al compilar.
+
+## Preguntas para revisar el PR 5
+1. ¿Qué pasaría si quitásemos el `spendingTypeId ? … : null` y mandásemos `Number(data.get('spending_type_id'))`? (pista: `Number("")`)
+2. En la lista, los gastos sin tipo no muestran nada. ¿Preferirías ver "Sin clasificar" para detectarlos de un vistazo, ahora que vamos a poder editarlos?
