@@ -127,6 +127,34 @@ export type Health = {
 };
 
 /**
+ * LogIn
+ */
+export type LogIn = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Password
+     */
+    password: string;
+};
+
+/**
+ * SignUp
+ */
+export type SignUp = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Password
+     */
+    password: string;
+};
+
+/**
  * SpendingTypeRead
  */
 export type SpendingTypeRead = {
@@ -138,6 +166,20 @@ export type SpendingTypeRead = {
      * Name
      */
     name: string;
+};
+
+/**
+ * UserRead
+ */
+export type UserRead = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Email
+     */
+    email: string;
 };
 
 /**
@@ -167,6 +209,88 @@ export type ValidationError = {
         [key: string]: unknown;
     };
 };
+
+export type SignUpData = {
+    body: SignUp;
+    path?: never;
+    query?: never;
+    url: '/api/auth/signup';
+};
+
+export type SignUpErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SignUpError = SignUpErrors[keyof SignUpErrors];
+
+export type SignUpResponses = {
+    /**
+     * Successful Response
+     */
+    201: UserRead;
+};
+
+export type SignUpResponse = SignUpResponses[keyof SignUpResponses];
+
+export type LogInData = {
+    body: LogIn;
+    path?: never;
+    query?: never;
+    url: '/api/auth/login';
+};
+
+export type LogInErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type LogInError = LogInErrors[keyof LogInErrors];
+
+export type LogInResponses = {
+    /**
+     * Successful Response
+     */
+    200: UserRead;
+};
+
+export type LogInResponse = LogInResponses[keyof LogInResponses];
+
+export type LogOutData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/auth/logout';
+};
+
+export type LogOutResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type LogOutResponse = LogOutResponses[keyof LogOutResponses];
+
+export type GetCurrentUserData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/auth/me';
+};
+
+export type GetCurrentUserResponses = {
+    /**
+     * Successful Response
+     */
+    200: UserRead;
+};
+
+export type GetCurrentUserResponse = GetCurrentUserResponses[keyof GetCurrentUserResponses];
 
 export type ListCategoriesData = {
     body?: never;

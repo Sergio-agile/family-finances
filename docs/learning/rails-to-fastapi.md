@@ -174,7 +174,7 @@ Al regenerar el cliente en el PR 4, `ExpenseRead.spending_type` pasó a ser `Spe
 1. ¿Qué pasaría si quitásemos el `spendingTypeId ? … : null` y mandásemos `Number(data.get('spending_type_id'))`? (pista: `Number("")`)
 2. En la lista, los gastos sin tipo no muestran nada. ¿Preferirías ver "Sin clasificar" para detectarlos de un vistazo, ahora que vamos a poder editarlos?
 
-## Refactor de convenciones
+## Conceptos del PR 6: refactor de convenciones
 
 | Rails | Python / FastAPI | En este repo |
 |---|---|---|
@@ -191,11 +191,11 @@ Sin convención, SQLAlchemy deja las foreign keys sin nombre y Postgres les pone
 - `FAST`: convenciones de FastAPI. Detectó que `/api/health` declaraba el modelo dos veces: con `response_model=Health` y con `-> Health`. Cuando el tipo de retorno ya es el esquema, sobra el `response_model`. En los demás endpoints sí hace falta, porque devuelven un modelo SQLAlchemy y el esquema de salida es otro.
 - `PT`: buenas prácticas de pytest. `PERF`: antipatrones de rendimiento en bucles. `RUF`: reglas propias de Ruff.
 
-## Preguntas para revisar el refactor
+## Preguntas para revisar el PR 6
 1. Si mañana queremos un endpoint con los totales de todo el año, ¿lo haríamos quitando el límite de `GET /api/expenses` o con un endpoint aparte que agregue en SQL? ¿Por qué?
 2. ¿Por qué hacer `month` obligatorio no rompe el frontend, y cómo nos habríamos enterado si lo rompiera?
 
-## Conceptos del PATCH de gastos
+## Conceptos del PR 7: editar gastos (PATCH)
 
 | Rails | Python / FastAPI | En este repo |
 |---|---|---|
@@ -231,8 +231,54 @@ La comprobación de "¿existe esta categoría / este tipo?" estaba escrita dos v
 - **Ref callback en lugar de `useEffect`**: para abrir el diálogo hay que llamar a `showModal()` cuando ya existe en el DOM. El `ref={(dialog) => …}` se ejecuta justo en ese momento. El padre solo decide si lo pinta (`{editing && …}`).
 - **Montar y desmontar**: el formulario es no controlado, así que `defaultValue` solo se aplica al montarlo. Funciona porque al cerrar el diálogo `editing` vuelve a `null` y React lo desmonta: cada gasto que abres monta un formulario nuevo con sus valores.
 
-## Preguntas para revisar el PATCH
+## Preguntas para revisar el PR 7
 1. ¿Qué pasaría si quitásemos `exclude_unset=True` y el frontend enviase solo `{"spending_type_id": 3}`?
 2. ¿Por qué un `amount_cents: null` devuelve 422 y no 500? ¿Qué devolvería sin `reject_null`?
 3. El PATCH hace hasta 5 consultas (gasto, categoría, tipo, update y la recarga). ¿Merece la pena optimizarlo para un formulario que se envía a mano, o sería optimizar antes de tiempo?
 4. Si el diálogo estuviera siempre montado y solo cambiáramos la prop `expense`, ¿qué valores verías al abrir un segundo gasto? ¿Cómo lo arreglarías con `key`?
+
+## Conceptos del PR 8: cuentas, login y sesiones
+
+| Rails | Python / FastAPI | En este repo |
+|---|---|---|
+| `bin/rails generate authentication` (Rails 8) | lo mismo, a mano: modelo `UserSession` + cookie | `app/auth.py`, ADR 0004 |
+| `has_secure_password` (bcrypt) | `pwdlib` con Argon2id | `password_hash.hash()` / `.verify()` |
+| `before_action :require_authentication` | `dependencies=[Depends(current_user)]` al montar el router | `app/main.py` |
+| `Current.user` | parámetro `user: CurrentUser` en el endpoint | `get_current_user` |
+| `cookies.signed.permanent[:session_id]` | `response.set_cookie(..., httponly=True, secure=..., samesite="lax")` | `start_session` |
+| `protect_from_forgery` | `SameSite=Lax` + middleware que compara `Origin` con `Host` | `check_origin` |
+| middleware de Rack | `@app.middleware("http")` | |
+
+### El mismo diseño que Rails 8
+El generador de autenticación de Rails 8 crea una tabla `sessions` y guarda su id en una cookie firmada. Aquí es igual, con una diferencia: la cookie lleva un token aleatorio de 256 bits y en la base de datos solo guardamos su **SHA-256**. Si alguien roba una copia de la base de datos, no puede usar esos hashes como cookies. Para el token basta SHA-256 (rápido) porque es aleatorio; la contraseña necesita Argon2 (lento a propósito) porque las personas eligen contraseñas adivinables.
+
+### Proteger "todo menos el login" en un solo sitio
+En Rails pondrías `before_action` en `ApplicationController` y `allow_unauthenticated_access` en el login. Aquí se hace al revés: los routers de datos se montan con `dependencies=[Depends(current_user)]` en `main.py`, y el router de auth se monta sin ella. Un router nuevo de datos se añade a esa lista y ya está protegido.
+
+### `APIKeyCookie`: la cookie aparece en Swagger
+`current_user` no lee la cookie con `request.cookies`, sino con `APIKeyCookie(name="session")`. Funciona igual, pero además FastAPI la declara en el OpenAPI como esquema de seguridad: en `/docs` los endpoints protegidos salen con candado, y el cliente generado del frontend lo sabe.
+
+### Middleware
+`check_origin` se ejecuta en todas las peticiones, antes que cualquier endpoint, como un middleware de Rack. Si una petición que cambia datos (POST, PATCH, DELETE) trae un `Origin` de otro dominio, responde 403 sin llegar al endpoint. Por eso hubo que configurar el proxy de Vite con `changeOrigin: false`: sin eso, Vite cambiaba el `Host` a `localhost:8000` y todas las peticiones parecían de otro origen.
+
+### Tests: `client` ya viene con sesión
+En `conftest.py`, `anonymous_client` es el cliente sin cookie y `client` hace login de verdad con el usuario `user`. Los tests de gastos no han cambiado: piden `client` y ya están autenticados. Usa `https://testserver` porque la cookie es `Secure` y por HTTP no se enviaría.
+
+### Frontend: quién soy, como un dato más del servidor
+| Rails | React | En este repo |
+|---|---|---|
+| `if authenticated?` en el layout | `useCurrentUser()`: el usuario o `null` | `App.tsx` |
+| `redirect_to new_session_path` si no hay sesión | se pinta `<AuthScreen />` en lugar de la app | |
+| `rescue_from` para un 401 | interceptor de respuestas del cliente generado | `main.tsx` |
+
+- El usuario actual es una query más de TanStack Query (`['current-user']`). Login y registro guardan el usuario que devuelve la API con `setQueryData`, sin volver a pedirlo.
+- Al salir se borran de la caché todos los datos del usuario anterior (`removeQueries`), para que quien entre después no los vea ni un instante.
+- Si cualquier petición devuelve 401 (sesión caducada, o cerrada en otra pestaña), el interceptor pone el usuario a `null` y la app vuelve sola a la pantalla de acceso.
+- `autoComplete="current-password"` / `"new-password"` le dice al gestor de contraseñas si debe rellenar la guardada o proponer una nueva.
+
+## Preguntas para revisar el PR 8
+1. Si roban la tabla `sessions`, ¿pueden entrar como alguien? ¿Y si roban la tabla `users`?
+2. ¿Por qué `authenticate` verifica un `DUMMY_HASH` cuando el email no existe, si de todas formas va a devolver 401?
+3. Un formulario en `evil.example` hace POST a `/api/expenses`. ¿Qué lo para primero: `SameSite=Lax` o `check_origin`? ¿Y si el navegador fuera muy antiguo y no soportase `SameSite`?
+4. El registro responde 409 si el email ya existe, lo que permite averiguar quién tiene cuenta. ¿Qué haría falta para evitarlo?
+5. ¿Qué pasaría en el frontend si quitásemos el interceptor de 401 y la sesión caducase con la app abierta?

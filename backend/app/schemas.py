@@ -1,9 +1,19 @@
 from datetime import date, datetime
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    StringConstraints,
+    field_validator,
+)
 
 Concept = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+# Lowercased so "Ana@Example.com" and "ana@example.com" are the same account.
+Email = Annotated[EmailStr, AfterValidator(str.lower)]
 
 
 class CategoryRead(BaseModel):
@@ -57,3 +67,22 @@ class ExpenseRead(BaseModel):
     category: CategoryRead
     spending_type: SpendingTypeRead | None
     created_at: datetime
+
+
+class SignUp(BaseModel):
+    email: Email
+    # Length is what makes a password strong; no composition rules (NIST SP 800-63B).
+    password: str = Field(min_length=12, max_length=128)
+
+
+class LogIn(BaseModel):
+    email: Email
+    # No min_length: logging in checks the stored hash, not today's password policy.
+    password: str = Field(max_length=128)
+
+
+class UserRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    email: str

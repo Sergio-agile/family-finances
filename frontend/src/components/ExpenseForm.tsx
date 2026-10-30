@@ -4,9 +4,7 @@ import { useCategories, useCreateExpense, useSpendingTypes, useUpdateExpense } f
 import type { ExpenseCreate, ExpenseRead } from '../api/generated'
 import { todayISO } from '../lib/dates'
 import { centsToInput, parseAmountToCents } from '../lib/money'
-
-const inputClass =
-  'h-11 w-full rounded-lg border border-gray-300 bg-white px-3 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20'
+import { inputClass, primaryButtonClass } from './styles'
 
 type Props = {
   /** When given, the form edits this expense instead of creating a new one. */
@@ -146,7 +144,7 @@ export function ExpenseForm({ expense, onSaved }: Props) {
       <button
         type="submit"
         disabled={mutation.isPending}
-        className="w-full rounded-lg bg-emerald-600 py-3 font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+        className={primaryButtonClass}
       >
         {mutation.isPending ? 'Guardando…' : expense ? 'Guardar cambios' : 'Añadir gasto'}
       </button>

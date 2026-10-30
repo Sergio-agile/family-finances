@@ -32,6 +32,8 @@ npm install
 npm run dev                      # http://localhost:5173
 ```
 
+Open the app and create an account. To try it from a phone on the LAN (plain HTTP), set `SESSION_COOKIE_SECURE=false` in `.env`: the session cookie is `Secure` by default and browsers only accept it over HTTPS or on `localhost`.
+
 Frontend tests: `cd frontend && npm test`. After changing the API, regenerate the typed client with `npm run gen:api`.
 
 Backend tests: `cd backend && uv run pytest` (needs the database running; the suite creates and migrates its own `family_finances_test` database).
