@@ -282,3 +282,45 @@ En `conftest.py`, `anonymous_client` es el cliente sin cookie y `client` hace lo
 3. Un formulario en `evil.example` hace POST a `/api/expenses`. ¿Qué lo para primero: `SameSite=Lax` o `check_origin`? ¿Y si el navegador fuera muy antiguo y no soportase `SameSite`?
 4. El registro responde 409 si el email ya existe, lo que permite averiguar quién tiene cuenta. ¿Qué haría falta para evitarlo?
 5. ¿Qué pasaría en el frontend si quitásemos el interceptor de 401 y la sesión caducase con la app abierta?
+
+## Conceptos del PR 9: hogares
+
+| Rails | Python / FastAPI | En este repo |
+|---|---|---|
+| `resources :households do resources :expenses end` | `APIRouter(prefix="/api/households/{household_id}/expenses")` | `app/routers/expenses.py` |
+| `current_user.households.find(params[:household_id])` | dependencia `CurrentHousehold` | `app/auth.py` |
+| `@household.expenses.find(params[:id])` | `select(Expense).where(Expense.id == …, Expense.household_id == household.id)` | `update_expense` |
+| `has_many :households, through: :memberships` | `relationship(secondary="memberships")` | `User.households` |
+| `add_index :expenses, [:household_id, :spent_on]` | `Index(...)` en `__table_args__` | `Expense` |
+| migración con `execute "UPDATE …"` | `op.execute("…")` en la migración | `…_create_households.py` |
+| FactoryBot (`create(:expense, concept: "Café")`) | fixture que devuelve una función | `make_expense` en los tests |
+
+### Rutas anidadas y una sola puerta
+En Rails harías `@household = current_user.households.find(params[:household_id])` en un `before_action`. Aquí es la dependencia `current_household`: recibe `household_id` de la URL y al usuario de `current_user`, y devuelve el hogar solo si el usuario es miembro. Cada endpoint de gastos la pide con `household: CurrentHousehold` y filtra por `household.id`. Si un endpoint nuevo se olvidase de filtrar, los tests de aislamiento son los que lo detectarían.
+
+### 404 y no 403
+Si pides el hogar de otra familia, o un gasto suyo a través de tu hogar, la respuesta es 404, como si no existiera. Con un 403 confirmarías que ese id existe. Es lo mismo que hace `current_user.households.find`, que lanza `RecordNotFound`.
+
+### Una relación muchos a muchos sin modelo intermedio en el código
+`User.households` usa `secondary="memberships"`: SQLAlchemy inserta la fila en `memberships` cuando haces `User(households=[Household(...)])`. Es como `has_many :through`. Si mañana la membresía necesita datos propios (un rol, por ejemplo), se trabaja con el modelo `Membership`, que ya existe.
+
+### Un índice compuesto en lugar de dos
+Todas las consultas filtran primero por hogar y luego por fecha. Un índice `(household_id, spent_on)` resuelve las dos cosas a la vez. El índice antiguo de `spent_on` solo ya no servía, así que lo he quitado: cada índice cuesta en cada INSERT y UPDATE.
+
+### Migración con datos
+Una columna NOT NULL nueva no se puede añadir a una tabla con filas sin decir qué valor llevan. La migración la crea como nullable, mete tus usuarios y gastos de desarrollo en un hogar "Mi hogar" con SQL, y luego la pone NOT NULL. Es el patrón de siempre en Rails, pero aquí Alembic no lo escribe solo: autogenerate solo ve el esquema.
+
+### Fábricas en los tests
+`make_expense(concept="Café")` crea un gasto en el hogar del usuario, con valores por defecto para todo lo demás. Es una fixture que devuelve una función, el equivalente de FactoryBot. Cada test escribe solo los campos que importan para lo que comprueba.
+
+### Los tests ya no leen tu `.env`
+La fixture `production_settings` (con `autouse=True`, se aplica a todos los tests) fuerza la configuración de producción. Sin ella, tu `SESSION_COOKIE_SECURE=false` local rompía el test de la cookie `Secure`. `monkeypatch` es como `allow(...).to receive` o `stub_const`: lo deshace al acabar cada test.
+
+### Frontend: el hogar sale del usuario actual
+`useHouseholdId()` lee el primer hogar de `useCurrentUser()`, que ya está en la caché. Los hooks de gastos lo usan por dentro, así que los componentes no han cambiado. El id del hogar forma parte del `queryKey` (`['expenses', householdId, month]`): si mañana cambias de hogar, la caché de cada uno va por separado.
+
+## Preguntas para revisar el PR 9
+1. ¿Qué pasaría si `update_expense` siguiera usando `session.get(Expense, expense_id)` sin filtrar por hogar? ¿Qué test lo detectaría?
+2. ¿Por qué el índice es `(household_id, spent_on)` y no `(spent_on, household_id)`?
+3. Si un usuario pertenece a dos hogares, ¿qué cambiaría en el backend para mostrar los dos? ¿Y en el frontend?
+4. Las categorías siguen siendo globales. Si una familia quiere crear la categoría "Mascotas", ¿qué opciones hay y qué implicaría cada una?
