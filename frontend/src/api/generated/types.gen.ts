@@ -127,6 +127,20 @@ export type Health = {
 };
 
 /**
+ * HouseholdRead
+ */
+export type HouseholdRead = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Name
+     */
+    name: string;
+};
+
+/**
  * LogIn
  */
 export type LogIn = {
@@ -180,6 +194,10 @@ export type UserRead = {
      * Email
      */
     email: string;
+    /**
+     * Households
+     */
+    households: Array<HouseholdRead>;
 };
 
 /**
@@ -312,14 +330,19 @@ export type ListCategoriesResponse = ListCategoriesResponses[keyof ListCategorie
 
 export type ListExpensesData = {
     body?: never;
-    path?: never;
+    path: {
+        /**
+         * Household Id
+         */
+        household_id: number;
+    };
     query: {
         /**
          * Month
          */
         month: string;
     };
-    url: '/api/expenses';
+    url: '/api/households/{household_id}/expenses';
 };
 
 export type ListExpensesErrors = {
@@ -344,9 +367,14 @@ export type ListExpensesResponse = ListExpensesResponses[keyof ListExpensesRespo
 
 export type CreateExpenseData = {
     body: ExpenseCreate;
-    path?: never;
+    path: {
+        /**
+         * Household Id
+         */
+        household_id: number;
+    };
     query?: never;
-    url: '/api/expenses';
+    url: '/api/households/{household_id}/expenses';
 };
 
 export type CreateExpenseErrors = {
@@ -374,9 +402,13 @@ export type UpdateExpenseData = {
          * Expense Id
          */
         expense_id: number;
+        /**
+         * Household Id
+         */
+        household_id: number;
     };
     query?: never;
-    url: '/api/expenses/{expense_id}';
+    url: '/api/households/{household_id}/expenses/{expense_id}';
 };
 
 export type UpdateExpenseErrors = {

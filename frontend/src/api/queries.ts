@@ -81,19 +81,44 @@ export function useSpendingTypes() {
   })
 }
 
+/**
+ * The household the app works on: for now, the user's first one (a switcher can come later).
+ * Only for components shown while logged in, which is when the current user is in the cache.
+ */
+function useHouseholdId() {
+  const { data: user } = useCurrentUser()
+  return user!.households[0].id
+}
+
 export function useExpenses(month: string) {
+  const householdId = useHouseholdId()
+
   return useQuery({
-    queryKey: ['expenses', month],
-    queryFn: async () => (await listExpenses({ query: { month }, throwOnError: true })).data,
+    queryKey: ['expenses', householdId, month],
+    queryFn: async () =>
+      (
+        await listExpenses({
+          path: { household_id: householdId },
+          query: { month },
+          throwOnError: true,
+        })
+      ).data,
   })
 }
 
 export function useCreateExpense() {
   const queryClient = useQueryClient()
+  const householdId = useHouseholdId()
 
   return useMutation({
     mutationFn: async (expense: ExpenseCreate) =>
-      (await createExpense({ body: expense, throwOnError: true })).data,
+      (
+        await createExpense({
+          path: { household_id: householdId },
+          body: expense,
+          throwOnError: true,
+        })
+      ).data,
     // Every cached expense list may now be outdated, whatever month it shows.
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['expenses'] }),
   })
@@ -101,10 +126,17 @@ export function useCreateExpense() {
 
 export function useUpdateExpense() {
   const queryClient = useQueryClient()
+  const householdId = useHouseholdId()
 
   return useMutation({
     mutationFn: async ({ id, changes }: { id: number; changes: ExpenseUpdate }) =>
-      (await updateExpense({ path: { expense_id: id }, body: changes, throwOnError: true })).data,
+      (
+        await updateExpense({
+          path: { household_id: householdId, expense_id: id },
+          body: changes,
+          throwOnError: true,
+        })
+      ).data,
     // The date may have moved the expense to another month, so refresh every cached list.
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['expenses'] }),
   })
