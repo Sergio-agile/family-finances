@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import DateTime, ForeignKey, MetaData, String, func
+from sqlalchemy import DateTime, ForeignKey, LargeBinary, MetaData, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -49,3 +49,27 @@ class Expense(Base):
 
     category: Mapped[Category] = relationship()
     spending_type: Mapped[SpendingType | None] = relationship()
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # Stored lowercased (see schemas.Email), so the unique constraint is case-insensitive.
+    email: Mapped[str] = mapped_column(String(254), unique=True)
+    # Argon2id hash in PHC format: algorithm, parameters and salt travel with the hash.
+    password_hash: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class UserSession(Base):
+    """A logged-in browser. The cookie holds a random token; only its SHA-256 is stored, so a
+    leaked database cannot be replayed as cookies."""
+
+    __tablename__ = "sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    token_hash: Mapped[bytes] = mapped_column(LargeBinary(32), unique=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

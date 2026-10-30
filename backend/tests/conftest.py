@@ -8,10 +8,11 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
+from app.auth import password_hash
 from app.config import settings
 from app.db import get_session
 from app.main import app
-from app.models import Category, SpendingType
+from app.models import Category, SpendingType, User
 
 # Like Rails: a separate test database, next to the development one.
 TEST_DATABASE_URL = make_url(settings.database_url).set(database="family_finances_test")
@@ -53,12 +54,34 @@ def session(engine):
         transaction.rollback()
 
 
+PASSWORD = "correct horse battery staple"
+
+
 @pytest.fixture
-def client(session):
+def anonymous_client(session):
     """HTTP client whose requests use the test session instead of the real database."""
     app.dependency_overrides[get_session] = lambda: session
-    yield TestClient(app)
+    # HTTPS, as in production: the session cookie is Secure and would not be sent over HTTP.
+    yield TestClient(app, base_url="https://testserver")
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def user(session) -> User:
+    user = User(email="ana@example.com", password_hash=password_hash.hash(PASSWORD))
+    session.add(user)
+    session.flush()
+    return user
+
+
+@pytest.fixture
+def client(anonymous_client, user):
+    """HTTP client logged in as `user`, through the real login endpoint."""
+    response = anonymous_client.post(
+        "/api/auth/login", json={"email": user.email, "password": PASSWORD}
+    )
+    assert response.status_code == 200
+    return anonymous_client
 
 
 @pytest.fixture
