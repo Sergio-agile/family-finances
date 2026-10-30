@@ -174,7 +174,7 @@ Al regenerar el cliente en el PR 4, `ExpenseRead.spending_type` pasó a ser `Spe
 1. ¿Qué pasaría si quitásemos el `spendingTypeId ? … : null` y mandásemos `Number(data.get('spending_type_id'))`? (pista: `Number("")`)
 2. En la lista, los gastos sin tipo no muestran nada. ¿Preferirías ver "Sin clasificar" para detectarlos de un vistazo, ahora que vamos a poder editarlos?
 
-## Refactor de convenciones
+## Conceptos del PR 6: refactor de convenciones
 
 | Rails | Python / FastAPI | En este repo |
 |---|---|---|
@@ -191,11 +191,11 @@ Sin convención, SQLAlchemy deja las foreign keys sin nombre y Postgres les pone
 - `FAST`: convenciones de FastAPI. Detectó que `/api/health` declaraba el modelo dos veces: con `response_model=Health` y con `-> Health`. Cuando el tipo de retorno ya es el esquema, sobra el `response_model`. En los demás endpoints sí hace falta, porque devuelven un modelo SQLAlchemy y el esquema de salida es otro.
 - `PT`: buenas prácticas de pytest. `PERF`: antipatrones de rendimiento en bucles. `RUF`: reglas propias de Ruff.
 
-## Preguntas para revisar el refactor
+## Preguntas para revisar el PR 6
 1. Si mañana queremos un endpoint con los totales de todo el año, ¿lo haríamos quitando el límite de `GET /api/expenses` o con un endpoint aparte que agregue en SQL? ¿Por qué?
 2. ¿Por qué hacer `month` obligatorio no rompe el frontend, y cómo nos habríamos enterado si lo rompiera?
 
-## Conceptos del PATCH de gastos
+## Conceptos del PR 7: editar gastos (PATCH)
 
 | Rails | Python / FastAPI | En este repo |
 |---|---|---|
@@ -231,13 +231,13 @@ La comprobación de "¿existe esta categoría / este tipo?" estaba escrita dos v
 - **Ref callback en lugar de `useEffect`**: para abrir el diálogo hay que llamar a `showModal()` cuando ya existe en el DOM. El `ref={(dialog) => …}` se ejecuta justo en ese momento. El padre solo decide si lo pinta (`{editing && …}`).
 - **Montar y desmontar**: el formulario es no controlado, así que `defaultValue` solo se aplica al montarlo. Funciona porque al cerrar el diálogo `editing` vuelve a `null` y React lo desmonta: cada gasto que abres monta un formulario nuevo con sus valores.
 
-## Preguntas para revisar el PATCH
+## Preguntas para revisar el PR 7
 1. ¿Qué pasaría si quitásemos `exclude_unset=True` y el frontend enviase solo `{"spending_type_id": 3}`?
 2. ¿Por qué un `amount_cents: null` devuelve 422 y no 500? ¿Qué devolvería sin `reject_null`?
 3. El PATCH hace hasta 5 consultas (gasto, categoría, tipo, update y la recarga). ¿Merece la pena optimizarlo para un formulario que se envía a mano, o sería optimizar antes de tiempo?
 4. Si el diálogo estuviera siempre montado y solo cambiáramos la prop `expense`, ¿qué valores verías al abrir un segundo gasto? ¿Cómo lo arreglarías con `key`?
 
-## Conceptos de las cuentas: registro, login y sesiones
+## Conceptos del PR 8: cuentas, login y sesiones
 
 | Rails | Python / FastAPI | En este repo |
 |---|---|---|
@@ -276,7 +276,7 @@ En `conftest.py`, `anonymous_client` es el cliente sin cookie y `client` hace lo
 - Si cualquier petición devuelve 401 (sesión caducada, o cerrada en otra pestaña), el interceptor pone el usuario a `null` y la app vuelve sola a la pantalla de acceso.
 - `autoComplete="current-password"` / `"new-password"` le dice al gestor de contraseñas si debe rellenar la guardada o proponer una nueva.
 
-## Preguntas para revisar las cuentas
+## Preguntas para revisar el PR 8
 1. Si roban la tabla `sessions`, ¿pueden entrar como alguien? ¿Y si roban la tabla `users`?
 2. ¿Por qué `authenticate` verifica un `DUMMY_HASH` cuando el email no existe, si de todas formas va a devolver 401?
 3. Un formulario en `evil.example` hace POST a `/api/expenses`. ¿Qué lo para primero: `SameSite=Lax` o `check_origin`? ¿Y si el navegador fuera muy antiguo y no soportase `SameSite`?
