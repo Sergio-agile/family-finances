@@ -21,6 +21,17 @@ def test_signs_up_and_is_logged_in(anonymous_client, session):
     assert user.password_hash.startswith("$argon2id$")
 
 
+def test_sign_up_creates_a_household_for_the_new_user(anonymous_client):
+    response = anonymous_client.post(
+        "/api/auth/signup", json={"email": "luis@example.com", "password": PASSWORD}
+    )
+
+    households = response.json()["households"]
+    assert [h["name"] for h in households] == ["Mi hogar"]
+    expenses_url = f"/api/households/{households[0]['id']}/expenses"
+    assert anonymous_client.get(expenses_url, params={"month": "2026-10"}).json() == []
+
+
 def test_sign_up_rejects_a_taken_email_in_any_case(anonymous_client, user):
     response = anonymous_client.post(
         "/api/auth/signup", json={"email": "ANA@example.com", "password": PASSWORD}
@@ -42,13 +53,17 @@ def test_sign_up_rejects_invalid_data(anonymous_client, payload):
     assert response.status_code == 422
 
 
-def test_logs_in_with_a_secure_cookie(anonymous_client, user):
+def test_logs_in_with_a_secure_cookie(anonymous_client, user, household):
     response = anonymous_client.post(
         "/api/auth/login", json={"email": "Ana@Example.com", "password": PASSWORD}
     )
 
     assert response.status_code == 200
-    assert response.json() == {"id": user.id, "email": "ana@example.com"}
+    assert response.json() == {
+        "id": user.id,
+        "email": "ana@example.com",
+        "households": [{"id": household.id, "name": "Casa de Ana"}],
+    }
     cookie = response.headers["set-cookie"]
     assert cookie.startswith(f"{SESSION_COOKIE}=")
     for flag in ["HttpOnly", "Secure", "SameSite=lax", "Max-Age=2592000"]:
@@ -110,7 +125,9 @@ def test_logout_ends_the_session(client, session):
     assert client.get("/api/auth/me").status_code == 401
 
 
-@pytest.mark.parametrize("path", ["/api/categories", "/api/spending-types", "/api/expenses"])
+@pytest.mark.parametrize(
+    "path", ["/api/categories", "/api/spending-types", "/api/households/1/expenses"]
+)
 def test_data_endpoints_require_login(anonymous_client, path):
     response = anonymous_client.get(path, params={"month": "2026-10"})
 

@@ -1,6 +1,15 @@
 from datetime import date, datetime
 
-from sqlalchemy import DateTime, ForeignKey, LargeBinary, MetaData, String, func
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Index,
+    LargeBinary,
+    MetaData,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -34,8 +43,11 @@ class SpendingType(Base):
 
 class Expense(Base):
     __tablename__ = "expenses"
+    # Every query filters by household and then by date: one composite index serves both.
+    __table_args__ = (Index("ix_expenses_household_id_spent_on", "household_id", "spent_on"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    household_id: Mapped[int] = mapped_column(ForeignKey("households.id", ondelete="CASCADE"))
     # Money is stored as integer cents to avoid floating-point rounding errors.
     amount_cents: Mapped[int]
     concept: Mapped[str] = mapped_column(String(200))
@@ -44,7 +56,7 @@ class Expense(Base):
     spending_type_id: Mapped[int | None] = mapped_column(
         ForeignKey("spending_types.id"), index=True
     )
-    spent_on: Mapped[date] = mapped_column(index=True)
+    spent_on: Mapped[date]
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     category: Mapped[Category] = relationship()
@@ -61,6 +73,10 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    households: Mapped[list["Household"]] = relationship(
+        secondary="memberships", order_by="Household.id"
+    )
+
 
 class UserSession(Base):
     """A logged-in browser. The cookie holds a random token; only its SHA-256 is stored, so a
@@ -73,3 +89,24 @@ class UserSession(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class Household(Base):
+    """A family: its members share every expense in it. A user can belong to several."""
+
+    __tablename__ = "households"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Membership(Base):
+    __tablename__ = "memberships"
+    # Also the index for "is this user a member of this household?" and "this user's households".
+    __table_args__ = (UniqueConstraint("user_id", "household_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    household_id: Mapped[int] = mapped_column(ForeignKey("households.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

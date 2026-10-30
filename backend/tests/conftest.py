@@ -12,7 +12,7 @@ from app.auth import password_hash
 from app.config import settings
 from app.db import get_session
 from app.main import app
-from app.models import Category, SpendingType, User
+from app.models import Category, Household, SpendingType, User
 
 # Like Rails: a separate test database, next to the development one.
 TEST_DATABASE_URL = make_url(settings.database_url).set(database="family_finances_test")
@@ -43,6 +43,12 @@ def engine():
     engine.dispose()
 
 
+@pytest.fixture(autouse=True)
+def production_settings(monkeypatch):
+    """Tests check production behavior, whatever a developer's local .env relaxes."""
+    monkeypatch.setattr(settings, "session_cookie_secure", True)
+
+
 @pytest.fixture
 def session(engine):
     """Each test runs inside a transaction that is rolled back afterwards."""
@@ -67,8 +73,21 @@ def anonymous_client(session):
 
 
 @pytest.fixture
-def user(session) -> User:
-    user = User(email="ana@example.com", password_hash=password_hash.hash(PASSWORD))
+def household(session) -> Household:
+    household = Household(name="Casa de Ana")
+    session.add(household)
+    session.flush()
+    return household
+
+
+@pytest.fixture
+def user(session, household) -> User:
+    """A member of `household`."""
+    user = User(
+        email="ana@example.com",
+        password_hash=password_hash.hash(PASSWORD),
+        households=[household],
+    )
     session.add(user)
     session.flush()
     return user
