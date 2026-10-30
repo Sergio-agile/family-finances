@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateExpenseData, CreateExpenseErrors, CreateExpenseResponses, HealthData, HealthResponses, ListCategoriesData, ListCategoriesResponses, ListExpensesData, ListExpensesErrors, ListExpensesResponses, ListSpendingTypesData, ListSpendingTypesResponses, UpdateExpenseData, UpdateExpenseErrors, UpdateExpenseResponses } from './types.gen';
+import type { CreateExpenseData, CreateExpenseErrors, CreateExpenseResponses, GetCurrentUserData, GetCurrentUserResponses, HealthData, HealthResponses, ListCategoriesData, ListCategoriesResponses, ListExpensesData, ListExpensesErrors, ListExpensesResponses, ListSpendingTypesData, ListSpendingTypesResponses, LogInData, LogInErrors, LogInResponses, LogOutData, LogOutResponses, SignUpData, SignUpErrors, SignUpResponses, UpdateExpenseData, UpdateExpenseErrors, UpdateExpenseResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -19,21 +19,94 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 /**
+ * Sign Up
+ *
+ * Create an account and log in with it.
+ */
+export const signUp = <ThrowOnError extends boolean = false>(options: Options<SignUpData, ThrowOnError>): RequestResult<SignUpResponses, SignUpErrors, ThrowOnError> => (options.client ?? client).post<SignUpResponses, SignUpErrors, ThrowOnError>({
+    url: '/api/auth/signup',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Log In
+ */
+export const logIn = <ThrowOnError extends boolean = false>(options: Options<LogInData, ThrowOnError>): RequestResult<LogInResponses, LogInErrors, ThrowOnError> => (options.client ?? client).post<LogInResponses, LogInErrors, ThrowOnError>({
+    url: '/api/auth/login',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Log Out
+ */
+export const logOut = <ThrowOnError extends boolean = false>(options?: Options<LogOutData, ThrowOnError>): RequestResult<LogOutResponses, unknown, ThrowOnError> => (options?.client ?? client).post<LogOutResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/auth/logout',
+    ...options
+});
+
+/**
+ * Get Current User
+ */
+export const getCurrentUser = <ThrowOnError extends boolean = false>(options?: Options<GetCurrentUserData, ThrowOnError>): RequestResult<GetCurrentUserResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetCurrentUserResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/auth/me',
+    ...options
+});
+
+/**
  * List Categories
  */
-export const listCategories = <ThrowOnError extends boolean = false>(options?: Options<ListCategoriesData, ThrowOnError>): RequestResult<ListCategoriesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListCategoriesResponses, unknown, ThrowOnError>({ url: '/api/categories', ...options });
+export const listCategories = <ThrowOnError extends boolean = false>(options?: Options<ListCategoriesData, ThrowOnError>): RequestResult<ListCategoriesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListCategoriesResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/categories',
+    ...options
+});
 
 /**
  * List Expenses
  *
  * Expenses of one month (YYYY-MM), newest first.
  */
-export const listExpenses = <ThrowOnError extends boolean = false>(options: Options<ListExpensesData, ThrowOnError>): RequestResult<ListExpensesResponses, ListExpensesErrors, ThrowOnError> => (options.client ?? client).get<ListExpensesResponses, ListExpensesErrors, ThrowOnError>({ url: '/api/expenses', ...options });
+export const listExpenses = <ThrowOnError extends boolean = false>(options: Options<ListExpensesData, ThrowOnError>): RequestResult<ListExpensesResponses, ListExpensesErrors, ThrowOnError> => (options.client ?? client).get<ListExpensesResponses, ListExpensesErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/expenses',
+    ...options
+});
 
 /**
  * Create Expense
  */
 export const createExpense = <ThrowOnError extends boolean = false>(options: Options<CreateExpenseData, ThrowOnError>): RequestResult<CreateExpenseResponses, CreateExpenseErrors, ThrowOnError> => (options.client ?? client).post<CreateExpenseResponses, CreateExpenseErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
     url: '/api/expenses',
     ...options,
     headers: {
@@ -46,6 +119,11 @@ export const createExpense = <ThrowOnError extends boolean = false>(options: Opt
  * Update Expense
  */
 export const updateExpense = <ThrowOnError extends boolean = false>(options: Options<UpdateExpenseData, ThrowOnError>): RequestResult<UpdateExpenseResponses, UpdateExpenseErrors, ThrowOnError> => (options.client ?? client).patch<UpdateExpenseResponses, UpdateExpenseErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
     url: '/api/expenses/{expense_id}',
     ...options,
     headers: {
@@ -59,7 +137,15 @@ export const updateExpense = <ThrowOnError extends boolean = false>(options: Opt
  *
  * In seed order, which goes from essential to optional spending, not alphabetically.
  */
-export const listSpendingTypes = <ThrowOnError extends boolean = false>(options?: Options<ListSpendingTypesData, ThrowOnError>): RequestResult<ListSpendingTypesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListSpendingTypesResponses, unknown, ThrowOnError>({ url: '/api/spending-types', ...options });
+export const listSpendingTypes = <ThrowOnError extends boolean = false>(options?: Options<ListSpendingTypesData, ThrowOnError>): RequestResult<ListSpendingTypesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListSpendingTypesResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/spending-types',
+    ...options
+});
 
 /**
  * Health

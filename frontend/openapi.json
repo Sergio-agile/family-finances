@@ -5,6 +5,134 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/auth/signup": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Sign Up",
+        "description": "Create an account and log in with it.",
+        "operationId": "sign_up",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignUp"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Log In",
+        "operationId": "log_in",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Log Out",
+        "operationId": "log_out",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ]
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Current User",
+        "operationId": "get_current_user",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRead"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ]
+      }
+    },
     "/api/categories": {
       "get": {
         "tags": [
@@ -27,7 +155,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ]
       }
     },
     "/api/expenses": {
@@ -38,6 +171,11 @@
         "summary": "List Expenses",
         "description": "Expenses of one month (YYYY-MM), newest first.",
         "operationId": "list_expenses",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
         "parameters": [
           {
             "name": "month",
@@ -86,6 +224,11 @@
         ],
         "summary": "Create Expense",
         "operationId": "create_expense",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -127,6 +270,11 @@
         ],
         "summary": "Update Expense",
         "operationId": "update_expense",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
         "parameters": [
           {
             "name": "expense_id",
@@ -195,7 +343,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ]
       }
     },
     "/api/health": {
@@ -427,6 +580,47 @@
         ],
         "title": "Health"
       },
+      "LogIn": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LogIn"
+      },
+      "SignUp": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 12,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "SignUp"
+      },
       "SpendingTypeRead": {
         "properties": {
           "id": {
@@ -444,6 +638,24 @@
           "name"
         ],
         "title": "SpendingTypeRead"
+      },
+      "UserRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email"
+        ],
+        "title": "UserRead"
       },
       "ValidationError": {
         "properties": {
@@ -484,6 +696,13 @@
           "type"
         ],
         "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "session"
       }
     }
   }
