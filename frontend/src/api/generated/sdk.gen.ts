@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateExpenseData, CreateExpenseErrors, CreateExpenseResponses, GetCurrentUserData, GetCurrentUserResponses, HealthData, HealthResponses, ListCategoriesData, ListCategoriesResponses, ListExpensesData, ListExpensesErrors, ListExpensesResponses, ListSpendingTypesData, ListSpendingTypesResponses, LogInData, LogInErrors, LogInResponses, LogOutData, LogOutResponses, SignUpData, SignUpErrors, SignUpResponses, UpdateExpenseData, UpdateExpenseErrors, UpdateExpenseResponses } from './types.gen';
+import type { CreateExpenseData, CreateExpenseErrors, CreateExpenseResponses, GetCurrentUserData, GetCurrentUserResponses, HealthData, HealthResponses, InviteToHouseholdData, InviteToHouseholdErrors, InviteToHouseholdResponses, ListCategoriesData, ListCategoriesResponses, ListExpensesData, ListExpensesErrors, ListExpensesResponses, ListSpendingTypesData, ListSpendingTypesResponses, LogInData, LogInErrors, LogInResponses, LogOutData, LogOutResponses, SignUpData, SignUpErrors, SignUpResponses, UpdateExpenseData, UpdateExpenseErrors, UpdateExpenseResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -21,7 +21,7 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 /**
  * Sign Up
  *
- * Create an account, with a new household of its own, and log in with it.
+ * Create an account in the household that sent the invitation, and log in with it.
  */
 export const signUp = <ThrowOnError extends boolean = false>(options: Options<SignUpData, ThrowOnError>): RequestResult<SignUpResponses, SignUpErrors, ThrowOnError> => (options.client ?? client).post<SignUpResponses, SignUpErrors, ThrowOnError>({
     url: '/api/auth/signup',
@@ -130,6 +130,21 @@ export const updateExpense = <ThrowOnError extends boolean = false>(options: Opt
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * Invite To Household
+ *
+ * A one-time sign-up link that joins this household. Any member can create one.
+ */
+export const inviteToHousehold = <ThrowOnError extends boolean = false>(options: Options<InviteToHouseholdData, ThrowOnError>): RequestResult<InviteToHouseholdResponses, InviteToHouseholdErrors, ThrowOnError> => (options.client ?? client).post<InviteToHouseholdResponses, InviteToHouseholdErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/households/{household_id}/invitations',
+    ...options
 });
 
 /**

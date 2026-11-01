@@ -4,6 +4,7 @@ import type { UserRead } from './api/generated'
 import { AuthScreen } from './components/AuthScreen'
 import { ExpenseForm } from './components/ExpenseForm'
 import { ExpenseList } from './components/ExpenseList'
+import { InviteSection } from './components/InviteSection'
 import { currentMonth } from './lib/dates'
 
 export default function App() {
@@ -46,6 +47,7 @@ function Home({ user }: { user: UserRead }) {
 
       <ExpenseForm />
       <ExpenseList month={month} />
+      <InviteSection householdName={user.households[0].name} />
 
       <footer className="flex items-center justify-between gap-3 text-sm text-gray-500">
         <span className="truncate">{user.email}</span>

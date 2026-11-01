@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createExpense,
   getCurrentUser,
+  inviteToHousehold,
   listCategories,
   listExpenses,
   listSpendingTypes,
@@ -12,6 +13,7 @@ import {
   type ExpenseCreate,
   type ExpenseUpdate,
   type LogIn,
+  type SignUp,
   type UserRead,
 } from './generated'
 
@@ -35,7 +37,7 @@ export function useCurrentUser() {
 }
 
 /** Log in or sign up: both answer with the user and set the session cookie. */
-function useStartSession(request: (credentials: LogIn) => Promise<UserRead>) {
+function useStartSession<Body>(request: (body: Body) => Promise<UserRead>) {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -45,11 +47,11 @@ function useStartSession(request: (credentials: LogIn) => Promise<UserRead>) {
 }
 
 export function useLogIn() {
-  return useStartSession(async (body) => (await logIn({ body, throwOnError: true })).data)
+  return useStartSession(async (body: LogIn) => (await logIn({ body, throwOnError: true })).data)
 }
 
 export function useSignUp() {
-  return useStartSession(async (body) => (await signUp({ body, throwOnError: true })).data)
+  return useStartSession(async (body: SignUp) => (await signUp({ body, throwOnError: true })).data)
 }
 
 export function useLogOut() {
@@ -139,5 +141,14 @@ export function useUpdateExpense() {
       ).data,
     // The date may have moved the expense to another month, so refresh every cached list.
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['expenses'] }),
+  })
+}
+
+export function useCreateInvitation() {
+  const householdId = useHouseholdId()
+
+  return useMutation({
+    mutationFn: async () =>
+      (await inviteToHousehold({ path: { household_id: householdId }, throwOnError: true })).data,
   })
 }
