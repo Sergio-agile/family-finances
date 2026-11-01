@@ -32,7 +32,13 @@ npm install
 npm run dev                      # http://localhost:5173
 ```
 
-Open the app and create an account. To try it from a phone on the LAN (plain HTTP), set `SESSION_COOKIE_SECURE=false` in `.env`: the session cookie is `Secure` by default and browsers only accept it over HTTPS or on `localhost`.
+Sign-up is by invitation only. Create your household and open the link it prints:
+
+```sh
+cd backend && uv run python -m app.invitations "Casa García"
+```
+
+Then invite the rest of the family from the app. To try it from a phone on the LAN (plain HTTP), set `SESSION_COOKIE_SECURE=false` in `.env`: the session cookie is `Secure` by default and browsers only accept it over HTTPS or on `localhost`.
 
 Frontend tests: `cd frontend && npm test`. After changing the API, regenerate the typed client with `npm run gen:api`.
 
