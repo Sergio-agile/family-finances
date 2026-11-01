@@ -21,7 +21,7 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 /**
  * Sign Up
  *
- * Create an account and log in with it.
+ * Create an account, with a new household of its own, and log in with it.
  */
 export const signUp = <ThrowOnError extends boolean = false>(options: Options<SignUpData, ThrowOnError>): RequestResult<SignUpResponses, SignUpErrors, ThrowOnError> => (options.client ?? client).post<SignUpResponses, SignUpErrors, ThrowOnError>({
     url: '/api/auth/signup',
@@ -86,7 +86,7 @@ export const listCategories = <ThrowOnError extends boolean = false>(options?: O
 /**
  * List Expenses
  *
- * Expenses of one month (YYYY-MM), newest first.
+ * The household's expenses of one month (YYYY-MM), newest first.
  */
 export const listExpenses = <ThrowOnError extends boolean = false>(options: Options<ListExpensesData, ThrowOnError>): RequestResult<ListExpensesResponses, ListExpensesErrors, ThrowOnError> => (options.client ?? client).get<ListExpensesResponses, ListExpensesErrors, ThrowOnError>({
     security: [{
@@ -94,7 +94,7 @@ export const listExpenses = <ThrowOnError extends boolean = false>(options: Opti
             name: 'session',
             type: 'apiKey'
         }],
-    url: '/api/expenses',
+    url: '/api/households/{household_id}/expenses',
     ...options
 });
 
@@ -107,7 +107,7 @@ export const createExpense = <ThrowOnError extends boolean = false>(options: Opt
             name: 'session',
             type: 'apiKey'
         }],
-    url: '/api/expenses',
+    url: '/api/households/{household_id}/expenses',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -124,7 +124,7 @@ export const updateExpense = <ThrowOnError extends boolean = false>(options: Opt
             name: 'session',
             type: 'apiKey'
         }],
-    url: '/api/expenses/{expense_id}',
+    url: '/api/households/{household_id}/expenses/{expense_id}',
     ...options,
     headers: {
         'Content-Type': 'application/json',

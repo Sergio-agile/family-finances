@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useCurrentUser, useLogOut } from './api/queries'
+import type { UserRead } from './api/generated'
 import { AuthScreen } from './components/AuthScreen'
 import { ExpenseForm } from './components/ExpenseForm'
 import { ExpenseList } from './components/ExpenseList'
@@ -13,7 +14,7 @@ export default function App() {
       {currentUser.isPending ? null : currentUser.isError ? (
         <p className="py-12 text-center text-red-600">No se ha podido conectar con el servidor.</p>
       ) : currentUser.data ? (
-        <Home email={currentUser.data.email} />
+        <Home user={currentUser.data} />
       ) : (
         <AuthScreen />
       )}
@@ -21,14 +22,17 @@ export default function App() {
   )
 }
 
-function Home({ email }: { email: string }) {
+function Home({ user }: { user: UserRead }) {
   const [month, setMonth] = useState(currentMonth)
   const logOut = useLogOut()
 
   return (
     <main className="mx-auto max-w-md space-y-6 px-4 py-6">
       <header className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Family Finances</h1>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold">Family Finances</h1>
+          <p className="truncate text-sm text-gray-500">{user.households[0].name}</p>
+        </div>
         <label>
           <span className="sr-only">Mes</span>
           <input
@@ -44,7 +48,7 @@ function Home({ email }: { email: string }) {
       <ExpenseList month={month} />
 
       <footer className="flex items-center justify-between gap-3 text-sm text-gray-500">
-        <span className="truncate">{email}</span>
+        <span className="truncate">{user.email}</span>
         <button
           type="button"
           onClick={() => logOut.mutate()}

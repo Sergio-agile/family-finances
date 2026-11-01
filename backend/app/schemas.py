@@ -81,8 +81,16 @@ class LogIn(BaseModel):
     password: str = Field(max_length=128)
 
 
+class HouseholdRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+
+
 class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     email: str
+    households: list[HouseholdRead]

@@ -11,7 +11,7 @@
           "auth"
         ],
         "summary": "Sign Up",
-        "description": "Create an account and log in with it.",
+        "description": "Create an account, with a new household of its own, and log in with it.",
         "operationId": "sign_up",
         "requestBody": {
           "content": {
@@ -163,13 +163,13 @@
         ]
       }
     },
-    "/api/expenses": {
+    "/api/households/{household_id}/expenses": {
       "get": {
         "tags": [
           "expenses"
         ],
         "summary": "List Expenses",
-        "description": "Expenses of one month (YYYY-MM), newest first.",
+        "description": "The household's expenses of one month (YYYY-MM), newest first.",
         "operationId": "list_expenses",
         "security": [
           {
@@ -177,6 +177,15 @@
           }
         ],
         "parameters": [
+          {
+            "name": "household_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Household Id"
+            }
+          },
           {
             "name": "month",
             "in": "query",
@@ -229,6 +238,17 @@
             "APIKeyCookie": []
           }
         ],
+        "parameters": [
+          {
+            "name": "household_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Household Id"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -263,7 +283,7 @@
         }
       }
     },
-    "/api/expenses/{expense_id}": {
+    "/api/households/{household_id}/expenses/{expense_id}": {
       "patch": {
         "tags": [
           "expenses"
@@ -283,6 +303,15 @@
             "schema": {
               "type": "integer",
               "title": "Expense Id"
+            }
+          },
+          {
+            "name": "household_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Household Id"
             }
           }
         ],
@@ -580,6 +609,24 @@
         ],
         "title": "Health"
       },
+      "HouseholdRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "HouseholdRead"
+      },
       "LogIn": {
         "properties": {
           "email": {
@@ -648,12 +695,20 @@
           "email": {
             "type": "string",
             "title": "Email"
+          },
+          "households": {
+            "items": {
+              "$ref": "#/components/schemas/HouseholdRead"
+            },
+            "type": "array",
+            "title": "Households"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "email"
+          "email",
+          "households"
         ],
         "title": "UserRead"
       },

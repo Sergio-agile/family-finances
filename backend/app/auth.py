@@ -1,4 +1,4 @@
-"""Passwords, server-side sessions and the `CurrentUser` dependency."""
+"""Passwords, server-side sessions, and the `CurrentUser` and `CurrentHousehold` dependencies."""
 
 import hashlib
 import secrets
@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import SessionDep
-from app.models import User, UserSession
+from app.models import Household, Membership, User, UserSession
 
 SESSION_COOKIE = "session"
 SESSION_TTL = timedelta(days=30)
@@ -98,3 +98,19 @@ def current_user(session: SessionDep, token: SessionToken) -> User:
 
 
 CurrentUser = Annotated[User, Depends(current_user)]
+
+
+def current_household(household_id: int, user: CurrentUser, session: SessionDep) -> Household:
+    """FastAPI dependency: the household in the URL, if the user is a member. Otherwise 404, not
+    403, so nobody can find out which household ids exist."""
+    household = session.scalar(
+        select(Household)
+        .join(Membership)
+        .where(Household.id == household_id, Membership.user_id == user.id)
+    )
+    if household is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Household not found")
+    return household
+
+
+CurrentHousehold = Annotated[Household, Depends(current_household)]
