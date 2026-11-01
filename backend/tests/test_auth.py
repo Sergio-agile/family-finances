@@ -8,9 +8,14 @@ from app.models import User, UserSession
 from tests.conftest import PASSWORD
 
 
-def test_signs_up_and_is_logged_in(anonymous_client, session):
+def test_signs_up_with_an_invitation_and_is_logged_in(anonymous_client, session, invitation_token):
     response = anonymous_client.post(
-        "/api/auth/signup", json={"email": " Luis@Example.com ", "password": PASSWORD}
+        "/api/auth/signup",
+        json={
+            "email": " Luis@Example.com ",
+            "password": PASSWORD,
+            "invitation_token": invitation_token,
+        },
     )
 
     assert response.status_code == 201
@@ -21,34 +26,35 @@ def test_signs_up_and_is_logged_in(anonymous_client, session):
     assert user.password_hash.startswith("$argon2id$")
 
 
-def test_sign_up_creates_a_household_for_the_new_user(anonymous_client):
+def test_sign_up_rejects_a_taken_email_in_any_case(anonymous_client, user, invitation_token):
     response = anonymous_client.post(
-        "/api/auth/signup", json={"email": "luis@example.com", "password": PASSWORD}
-    )
-
-    households = response.json()["households"]
-    assert [h["name"] for h in households] == ["Mi hogar"]
-    expenses_url = f"/api/households/{households[0]['id']}/expenses"
-    assert anonymous_client.get(expenses_url, params={"month": "2026-10"}).json() == []
-
-
-def test_sign_up_rejects_a_taken_email_in_any_case(anonymous_client, user):
-    response = anonymous_client.post(
-        "/api/auth/signup", json={"email": "ANA@example.com", "password": PASSWORD}
+        "/api/auth/signup",
+        json={
+            "email": "ANA@example.com",
+            "password": PASSWORD,
+            "invitation_token": invitation_token,
+        },
     )
 
     assert response.status_code == 409
 
 
 @pytest.mark.parametrize(
-    "payload",
+    "changes",
     [
-        {"email": "luis@example.com", "password": "too short"},
-        {"email": "not an email", "password": PASSWORD},
+        {"password": "too short"},
+        {"email": "not an email"},
+        {"invitation_token": None},
     ],
 )
-def test_sign_up_rejects_invalid_data(anonymous_client, payload):
-    response = anonymous_client.post("/api/auth/signup", json=payload)
+def test_sign_up_rejects_invalid_data(anonymous_client, invitation_token, changes):
+    payload = {
+        "email": "luis@example.com",
+        "password": PASSWORD,
+        "invitation_token": invitation_token,
+    }
+
+    response = anonymous_client.post("/api/auth/signup", json=payload | changes)
 
     assert response.status_code == 422
 

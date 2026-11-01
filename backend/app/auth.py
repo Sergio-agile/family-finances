@@ -33,6 +33,12 @@ def hash_token(token: str) -> bytes:
     return hashlib.sha256(token.encode()).digest()
 
 
+def new_token() -> tuple[str, bytes]:
+    """A 256-bit random token for a cookie or a link, and the hash to store instead of it."""
+    token = secrets.token_urlsafe(32)
+    return token, hash_token(token)
+
+
 def authenticate(session: Session, email: str, password: str) -> User | None:
     user = session.scalar(select(User).where(User.email == email))
     if user is None:
@@ -49,10 +55,10 @@ def start_session(session: Session, response: Response, user: User) -> None:
             UserSession.user_id == user.id, UserSession.expires_at <= datetime.now(UTC)
         )
     )
-    token = secrets.token_urlsafe(32)
+    token, token_hash = new_token()
     session.add(
         UserSession(
-            token_hash=hash_token(token),
+            token_hash=token_hash,
             user_id=user.id,
             expires_at=datetime.now(UTC) + SESSION_TTL,
         )

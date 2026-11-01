@@ -8,7 +8,7 @@ from sqlalchemy import text
 
 from app.auth import current_user
 from app.db import SessionDep
-from app.routers import auth, categories, expenses, spending_types
+from app.routers import auth, categories, expenses, invitations, spending_types
 
 
 def operation_id(route: APIRoute) -> str:
@@ -20,7 +20,7 @@ def operation_id(route: APIRoute) -> str:
 app = FastAPI(title="Family Finances API", generate_unique_id_function=operation_id)
 app.include_router(auth.router)
 # Everything else needs a logged-in user. Declared here, once, so no router can forget it.
-for router in (categories.router, expenses.router, spending_types.router):
+for router in (categories.router, expenses.router, invitations.router, spending_types.router):
     app.include_router(router, dependencies=[Depends(current_user)])
 
 

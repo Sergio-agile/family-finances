@@ -10,7 +10,8 @@ from app.auth import (
     start_session,
 )
 from app.db import SessionDep
-from app.models import Household, User
+from app.invitations import accept_invitation
+from app.models import Membership, User
 from app.schemas import LogIn, SignUp, UserRead
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -18,18 +19,17 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 @router.post("/signup", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 def sign_up(payload: SignUp, session: SessionDep, response: Response) -> User:
-    """Create an account, with a new household of its own, and log in with it."""
+    """Create an account in the household that sent the invitation, and log in with it."""
     if session.scalar(select(exists().where(User.email == payload.email))):
         raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists")
+    household_id = accept_invitation(session, payload.invitation_token)
+    if household_id is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid or expired invitation")
 
-    user = User(
-        email=payload.email,
-        password_hash=password_hash.hash(payload.password),
-        # Through the `memberships` table, so this also makes the user a member.
-        households=[Household(name="Mi hogar")],
-    )
+    user = User(email=payload.email, password_hash=password_hash.hash(payload.password))
     session.add(user)
     session.flush()
+    session.add(Membership(user_id=user.id, household_id=household_id))
     start_session(session, response, user)
     return user
 

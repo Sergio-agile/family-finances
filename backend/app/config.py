@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     # Secure cookies are only sent over HTTPS. Turn off for plain-HTTP development from a phone
     # on the LAN; browsers already accept them on http://localhost.
     session_cookie_secure: bool = True
+    # Where the frontend is served, for links printed from the command line.
+    app_url: str = "http://localhost:5173"
 
 
 settings = Settings()
