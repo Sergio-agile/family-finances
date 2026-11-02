@@ -4,14 +4,7 @@ from sqlalchemy import select
 
 from app.auth import hash_token
 from app.models import Household, Invitation
-from tests.conftest import PASSWORD
-
-
-def sign_up(client, invitation_token, email="luis@example.com"):
-    return client.post(
-        "/api/auth/signup",
-        json={"email": email, "password": PASSWORD, "invitation_token": invitation_token},
-    )
+from tests.conftest import sign_up
 
 
 def test_a_member_creates_an_invitation_link(client, session, household):

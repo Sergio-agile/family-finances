@@ -303,6 +303,7 @@ def test_members_of_the_same_household_share_expenses(
     make_expense(concept="Compartido")
     session.add(
         User(
+            name="Luis",
             email="luis@example.com",
             password_hash=password_hash.hash(PASSWORD),
             households=[household],

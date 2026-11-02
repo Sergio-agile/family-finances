@@ -5,20 +5,16 @@ from sqlalchemy import select
 
 from app.auth import SESSION_COOKIE, hash_token
 from app.models import User, UserSession
-from tests.conftest import PASSWORD
+from tests.conftest import PASSWORD, sign_up
 
 
 def test_signs_up_with_an_invitation_and_is_logged_in(anonymous_client, session, invitation_token):
-    response = anonymous_client.post(
-        "/api/auth/signup",
-        json={
-            "email": " Luis@Example.com ",
-            "password": PASSWORD,
-            "invitation_token": invitation_token,
-        },
+    response = sign_up(
+        anonymous_client, invitation_token, name="  Luis ", email=" Luis@Example.com "
     )
 
     assert response.status_code == 201
+    assert response.json()["name"] == "Luis"
     assert response.json()["email"] == "luis@example.com"
     assert anonymous_client.get("/api/auth/me").json()["email"] == "luis@example.com"
     # The password is stored as an Argon2id hash, never in clear.
@@ -27,14 +23,7 @@ def test_signs_up_with_an_invitation_and_is_logged_in(anonymous_client, session,
 
 
 def test_sign_up_rejects_a_taken_email_in_any_case(anonymous_client, user, invitation_token):
-    response = anonymous_client.post(
-        "/api/auth/signup",
-        json={
-            "email": "ANA@example.com",
-            "password": PASSWORD,
-            "invitation_token": invitation_token,
-        },
-    )
+    response = sign_up(anonymous_client, invitation_token, email="ANA@example.com")
 
     assert response.status_code == 409
 
@@ -44,19 +33,18 @@ def test_sign_up_rejects_a_taken_email_in_any_case(anonymous_client, user, invit
     [
         {"password": "too short"},
         {"email": "not an email"},
-        {"invitation_token": None},
+        {"name": "   "},
+        {"name": "x" * 51},
     ],
 )
 def test_sign_up_rejects_invalid_data(anonymous_client, invitation_token, changes):
-    payload = {
-        "email": "luis@example.com",
-        "password": PASSWORD,
-        "invitation_token": invitation_token,
-    }
-
-    response = anonymous_client.post("/api/auth/signup", json=payload | changes)
+    response = sign_up(anonymous_client, invitation_token, **changes)
 
     assert response.status_code == 422
+
+
+def test_sign_up_requires_an_invitation(anonymous_client):
+    assert sign_up(anonymous_client, invitation_token=None).status_code == 422
 
 
 def test_logs_in_with_a_secure_cookie(anonymous_client, user, household):
@@ -67,6 +55,7 @@ def test_logs_in_with_a_secure_cookie(anonymous_client, user, household):
     assert response.status_code == 200
     assert response.json() == {
         "id": user.id,
+        "name": "Ana",
         "email": "ana@example.com",
         "households": [{"id": household.id, "name": "Casa de Ana"}],
     }
