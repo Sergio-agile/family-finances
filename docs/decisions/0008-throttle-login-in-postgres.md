@@ -9,7 +9,7 @@ Before going to production, nothing limited how many passwords someone could try
 ## Decision
 
 - Every failed login and every sign-up with an invalid invitation is stored in an **`auth_failures`** table (email, client IP, time).
-- Before checking a password, the API counts recent failures. **More than 5 for the email, or 20 for the IP, in the last 15 minutes → `429 Too Many Requests`** with `Retry-After: 900`. Since the password isn't checked while throttled, a lucky guess goes unnoticed and costs no Argon2.
+- Before checking a password, the API counts recent failures. **After 5 failures for the email, or 20 for the IP, in the last 15 minutes, further attempts get `429 Too Many Requests`** with `Retry-After: 900`. Since the password isn't checked while throttled, a lucky guess goes unnoticed and costs no Argon2.
 - A successful login clears that email's failures, so a family member who mistyped a few times starts again from zero.
 - Rows older than the window are deleted whenever a new failure is stored, so the table stays small.
 - Sign-up checks the invitation **before** the email, so without a valid invitation nobody can find out whether an email has an account.
