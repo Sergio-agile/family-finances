@@ -716,6 +716,12 @@
       },
       "SignUp": {
         "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Name"
+          },
           "email": {
             "type": "string",
             "format": "email",
@@ -735,6 +741,7 @@
         },
         "type": "object",
         "required": [
+          "name",
           "email",
           "password",
           "invitation_token"
@@ -765,6 +772,10 @@
             "type": "integer",
             "title": "Id"
           },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
           "email": {
             "type": "string",
             "title": "Email"
@@ -780,6 +791,7 @@
         "type": "object",
         "required": [
           "id",
+          "name",
           "email",
           "households"
         ],

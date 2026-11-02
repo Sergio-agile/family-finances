@@ -173,6 +173,10 @@ export type LogIn = {
  */
 export type SignUp = {
     /**
+     * Name
+     */
+    name: string;
+    /**
      * Email
      */
     email: string;
@@ -208,6 +212,10 @@ export type UserRead = {
      * Id
      */
     id: number;
+    /**
+     * Name
+     */
+    name: string;
     /**
      * Email
      */
