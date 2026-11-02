@@ -2,7 +2,6 @@ from datetime import date
 
 import pytest
 
-from app.auth import password_hash
 from app.models import Category, Expense, Household, User
 from tests.conftest import PASSWORD
 
@@ -13,7 +12,7 @@ def expenses_url(household) -> str:
 
 
 @pytest.fixture
-def make_expense(session, household, groceries):
+def make_expense(session, household, groceries, user):
     """Factory (like FactoryBot): an expense in `household`, with defaults for every field
     the test does not care about."""
 
@@ -24,6 +23,7 @@ def make_expense(session, household, groceries):
             "category_id": groceries.id,
             "spent_on": date(2026, 10, 1),
             "household_id": household.id,
+            "created_by_id": user.id,
         }
         expense = Expense(**defaults | fields)
         session.add(expense)
@@ -51,6 +51,56 @@ def test_creates_an_expense(client, expenses_url, groceries):
     assert body["spent_on"] == "2026-10-20"
     assert body["category"] == {"id": groceries.id, "name": "Supermercado"}
     assert body["spending_type"] is None
+    assert body["paid_by"] is None
+
+
+def test_creation_records_who_wrote_it_down(client, expenses_url, groceries, user):
+    response = client.post(
+        expenses_url,
+        # A client cannot choose the author: unknown fields like this one are ignored.
+        json={
+            "amount_cents": 300,
+            "concept": "Pan",
+            "category_id": groceries.id,
+            "created_by_id": 0,
+        },
+    )
+
+    assert response.json()["created_by"] == {"id": user.id, "name": "Ana"}
+
+
+def test_creates_an_expense_paid_by_a_member(client, expenses_url, groceries, luis):
+    response = client.post(
+        expenses_url,
+        json={
+            "amount_cents": 3000,
+            "concept": "Clases de baile",
+            "category_id": groceries.id,
+            "paid_by_id": luis.id,
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["paid_by"] == {"id": luis.id, "name": "Luis"}
+
+
+def test_rejects_a_payer_from_another_household(client, session, expenses_url, groceries):
+    outsider = User(name="Eva", email="eva@example.com", password_hash="unused")
+    session.add(outsider)
+    session.flush()
+
+    response = client.post(
+        expenses_url,
+        json={
+            "amount_cents": 100,
+            "concept": "Algo",
+            "category_id": groceries.id,
+            "paid_by_id": outsider.id,
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Payer does not belong to this household"
 
 
 def test_creates_an_expense_with_a_spending_type(client, expenses_url, groceries, ant_spending):
@@ -143,6 +193,27 @@ def test_lists_the_spending_type_of_each_expense(client, expenses_url, make_expe
         {"id": ant_spending.id, "name": "Gasto hormiga"},
         None,
     ]
+
+
+def test_lists_who_paid_and_who_wrote_it_down(client, expenses_url, make_expense, user, luis):
+    make_expense(paid_by_id=luis.id, spent_on=date(2026, 10, 2))
+    make_expense(spent_on=date(2026, 10, 1))
+
+    expenses = client.get(expenses_url, params={"month": "2026-10"}).json()
+
+    assert [e["paid_by"] for e in expenses] == [{"id": luis.id, "name": "Luis"}, None]
+    assert [e["created_by"]["name"] for e in expenses] == ["Ana", "Ana"]
+
+
+def test_assigns_the_payer_later_and_unassigns_it(client, expenses_url, make_expense, luis):
+    expense = make_expense()
+
+    assigned = client.patch(f"{expenses_url}/{expense.id}", json={"paid_by_id": luis.id})
+    unassigned = client.patch(f"{expenses_url}/{expense.id}", json={"paid_by_id": None})
+
+    assert assigned.json()["paid_by"] == {"id": luis.id, "name": "Luis"}
+    assert unassigned.json()["paid_by"] is None
+    assert unassigned.json()["created_by"]["name"] == "Ana"
 
 
 def test_month_filter_handles_december(client, expenses_url, make_expense):
@@ -298,21 +369,10 @@ def test_cannot_edit_another_households_expense_through_own_household(
 
 
 def test_members_of_the_same_household_share_expenses(
-    anonymous_client, session, household, expenses_url, make_expense
+    anonymous_client, expenses_url, make_expense, luis
 ):
     make_expense(concept="Compartido")
-    session.add(
-        User(
-            name="Luis",
-            email="luis@example.com",
-            password_hash=password_hash.hash(PASSWORD),
-            households=[household],
-        )
-    )
-    session.flush()
-    anonymous_client.post(
-        "/api/auth/login", json={"email": "luis@example.com", "password": PASSWORD}
-    )
+    anonymous_client.post("/api/auth/login", json={"email": luis.email, "password": PASSWORD})
 
     response = anonymous_client.get(expenses_url, params={"month": "2026-10"})
 

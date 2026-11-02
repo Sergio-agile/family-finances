@@ -349,6 +349,58 @@
         }
       }
     },
+    "/api/households/{household_id}/members": {
+      "get": {
+        "tags": [
+          "households"
+        ],
+        "summary": "List Members",
+        "description": "The household's members, by name. Small by nature (a family), so not paginated.",
+        "operationId": "list_members",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "household_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Household Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemberRead"
+                  },
+                  "title": "Response List Members"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/households/{household_id}/invitations": {
       "post": {
         "tags": [
@@ -496,6 +548,18 @@
             ],
             "title": "Spending Type Id"
           },
+          "paid_by_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid By Id",
+            "description": "The member who paid; null: not assigned yet"
+          },
           "spent_on": {
             "type": "string",
             "format": "date",
@@ -542,6 +606,19 @@
               }
             ]
           },
+          "paid_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MemberRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_by": {
+            "$ref": "#/components/schemas/MemberRead"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -556,6 +633,8 @@
           "spent_on",
           "category",
           "spending_type",
+          "paid_by",
+          "created_by",
           "created_at"
         ],
         "title": "ExpenseRead"
@@ -609,6 +688,17 @@
             ],
             "title": "Spending Type Id"
           },
+          "paid_by_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid By Id"
+          },
           "spent_on": {
             "anyOf": [
               {
@@ -624,7 +714,7 @@
         },
         "type": "object",
         "title": "ExpenseUpdate",
-        "description": "Partial update: only the fields sent are changed. `spending_type_id: null` unclassifies."
+        "description": "Partial update: only the fields sent are changed. `null` unassigns the optional\n`spending_type_id` and `paid_by_id`."
       },
       "HTTPValidationError": {
         "properties": {
@@ -713,6 +803,25 @@
           "password"
         ],
         "title": "LogIn"
+      },
+      "MemberRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "MemberRead",
+        "description": "A household member as other members see them: name only, never the email."
       },
       "SignUp": {
         "properties": {

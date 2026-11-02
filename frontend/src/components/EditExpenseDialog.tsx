@@ -22,9 +22,12 @@ export function EditExpenseDialog({ expense, onClose }: Props) {
     >
       <div className="space-y-3 p-4">
         <div className="flex items-center justify-between">
-          <h2 id="edit-expense-title" className="text-lg font-semibold text-white">
-            Editar gasto
-          </h2>
+          <div>
+            <h2 id="edit-expense-title" className="text-lg font-semibold text-white">
+              Editar gasto
+            </h2>
+            <p className="text-sm text-white/80">Apuntado por {expense.created_by.name}</p>
+          </div>
           <button
             type="button"
             onClick={onClose}

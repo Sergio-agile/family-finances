@@ -5,6 +5,7 @@ import {
   inviteToHousehold,
   listCategories,
   listExpenses,
+  listMembers,
   listSpendingTypes,
   logIn,
   logOut,
@@ -80,6 +81,17 @@ export function useSpendingTypes() {
     queryKey: ['spending-types'],
     queryFn: async () => (await listSpendingTypes({ throwOnError: true })).data,
     staleTime: Infinity,
+  })
+}
+
+export function useMembers() {
+  const householdId = useHouseholdId()
+
+  return useQuery({
+    queryKey: ['members', householdId],
+    queryFn: async () =>
+      (await listMembers({ path: { household_id: householdId }, throwOnError: true })).data,
+    staleTime: 5 * 60_000, // someone joining shows up within minutes, without refetching often
   })
 }
 

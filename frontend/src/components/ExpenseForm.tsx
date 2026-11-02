@@ -1,9 +1,17 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { useCategories, useCreateExpense, useSpendingTypes, useUpdateExpense } from '../api/queries'
+import {
+  useCategories,
+  useCreateExpense,
+  useCurrentUser,
+  useMembers,
+  useSpendingTypes,
+  useUpdateExpense,
+} from '../api/queries'
 import type { ExpenseCreate, ExpenseRead } from '../api/generated'
 import { todayISO } from '../lib/dates'
 import { centsToInput, parseAmountToCents } from '../lib/money'
+import { OptionalSelect } from './OptionalSelect'
 import { inputClass, primaryButtonClass } from './styles'
 
 type Props = {
@@ -15,6 +23,8 @@ type Props = {
 export function ExpenseForm({ expense, onSaved }: Props) {
   const categories = useCategories()
   const spendingTypes = useSpendingTypes()
+  const members = useMembers()
+  const currentUser = useCurrentUser()
   const createExpense = useCreateExpense()
   const updateExpense = useUpdateExpense()
   const mutation = expense ? updateExpense : createExpense
@@ -31,14 +41,15 @@ export function ExpenseForm({ expense, onSaved }: Props) {
       return
     }
     setAmountError(null)
-    // Optional: the empty option means "not classified yet".
-    const spendingTypeId = data.get('spending_type_id')
+    // The empty option of an optional select ("") is sent as null.
+    const optionalId = (field: string) => Number(data.get(field)) || null
 
     const values: ExpenseCreate = {
       amount_cents: amountCents,
       concept: String(data.get('concept')),
       category_id: Number(data.get('category_id')),
-      spending_type_id: spendingTypeId ? Number(spendingTypeId) : null,
+      spending_type_id: optionalId('spending_type_id'),
+      paid_by_id: optionalId('paid_by_id'),
       spent_on: String(data.get('spent_on')),
     }
 
@@ -118,24 +129,23 @@ export function ExpenseForm({ expense, onSaved }: Props) {
         </label>
       </div>
 
-      <label className="block">
-        <span className="mb-1 block text-sm font-medium text-gray-700">
-          Tipo de gasto <span className="font-normal text-gray-400">(opcional)</span>
-        </span>
-        <select
+      <div className="grid grid-cols-2 gap-3">
+        <OptionalSelect
           name="spending_type_id"
-          disabled={!spendingTypes.isSuccess}
-          defaultValue={expense?.spending_type?.id ?? ''}
-          className={inputClass}
-        >
-          <option value="">{spendingTypes.isPending ? 'Cargando…' : 'Sin clasificar'}</option>
-          {spendingTypes.data?.map((spendingType) => (
-            <option key={spendingType.id} value={spendingType.id}>
-              {spendingType.name}
-            </option>
-          ))}
-        </select>
-      </label>
+          label="Tipo"
+          emptyLabel="Sin clasificar"
+          options={spendingTypes}
+          defaultValue={expense?.spending_type?.id}
+        />
+        <OptionalSelect
+          name="paid_by_id"
+          label="Pagado por"
+          emptyLabel="Sin asignar"
+          options={members}
+          // A new expense is usually paid by whoever writes it down; it can be changed.
+          defaultValue={expense ? expense.paid_by?.id : currentUser.data?.id}
+        />
+      </div>
 
       {mutation.isError && (
         <p className="text-sm text-red-600">No se ha podido guardar el gasto. Inténtalo de nuevo.</p>

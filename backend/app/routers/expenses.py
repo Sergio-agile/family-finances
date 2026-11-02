@@ -2,12 +2,12 @@ from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import exists, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.auth import CurrentHousehold
+from app.auth import CurrentHousehold, CurrentUser
 from app.db import SessionDep
-from app.models import Category, Expense, SpendingType
+from app.models import Category, Expense, Membership, SpendingType
 from app.schemas import ExpenseCreate, ExpenseRead, ExpenseUpdate
 
 router = APIRouter(prefix="/api/households/{household_id}/expenses", tags=["expenses"])
@@ -16,16 +16,25 @@ router = APIRouter(prefix="/api/households/{household_id}/expenses", tags=["expe
 Month = Annotated[str, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$", examples=["2026-10"])]
 
 
-def ensure_references_exist(
-    session: Session, category_id: int | None, spending_type_id: int | None
-) -> None:
-    """Reject ids of missing categories or spending types with a clear 422 (None: not given)."""
-    for model, id_, label in [
-        (Category, category_id, "Category"),
-        (SpendingType, spending_type_id, "Spending type"),
+def ensure_references_exist(session: Session, household_id: int, fields: dict) -> None:
+    """Reject ids of missing categories or spending types, or of people outside the household,
+    with a clear 422. Fields that are absent or None are not checked."""
+    for model, field, label in [
+        (Category, "category_id", "Category"),
+        (SpendingType, "spending_type_id", "Spending type"),
     ]:
+        id_ = fields.get(field)
         if id_ is not None and session.get(model, id_) is None:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"{label} does not exist")
+
+    paid_by_id = fields.get("paid_by_id")
+    is_member = exists().where(
+        Membership.user_id == paid_by_id, Membership.household_id == household_id
+    )
+    if paid_by_id is not None and not session.scalar(select(is_member)):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Payer does not belong to this household"
+        )
 
 
 @router.get("", response_model=list[ExpenseRead])
@@ -36,7 +45,12 @@ def list_expenses(household: CurrentHousehold, session: SessionDep, month: Month
     end = date(year + month_number // 12, month_number % 12 + 1, 1)
     query = (
         select(Expense)
-        .options(selectinload(Expense.category), selectinload(Expense.spending_type))
+        .options(
+            selectinload(Expense.category),
+            selectinload(Expense.spending_type),
+            selectinload(Expense.paid_by),
+            selectinload(Expense.created_by),
+        )
         .where(
             Expense.household_id == household.id,
             Expense.spent_on >= start,
@@ -49,11 +63,11 @@ def list_expenses(household: CurrentHousehold, session: SessionDep, month: Month
 
 @router.post("", response_model=ExpenseRead, status_code=status.HTTP_201_CREATED)
 def create_expense(
-    payload: ExpenseCreate, household: CurrentHousehold, session: SessionDep
+    payload: ExpenseCreate, household: CurrentHousehold, user: CurrentUser, session: SessionDep
 ) -> Expense:
-    ensure_references_exist(session, payload.category_id, payload.spending_type_id)
+    ensure_references_exist(session, household.id, payload.model_dump())
 
-    expense = Expense(**payload.model_dump(), household_id=household.id)
+    expense = Expense(**payload.model_dump(), household_id=household.id, created_by_id=user.id)
     session.add(expense)
     session.commit()
     session.refresh(expense)
@@ -73,7 +87,7 @@ def update_expense(
 
     # Only what the client sent: an omitted field stays as it is.
     changes = payload.model_dump(exclude_unset=True)
-    ensure_references_exist(session, changes.get("category_id"), changes.get("spending_type_id"))
+    ensure_references_exist(session, household.id, changes)
 
     for field, value in changes.items():
         setattr(expense, field, value)

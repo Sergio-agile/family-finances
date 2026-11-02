@@ -381,3 +381,42 @@ Además de fixtures, `conftest.py` puede tener funciones normales. `sign_up(clie
 ## Preguntas para revisar el PR 11
 1. ¿Por qué la migración no puede añadir directamente `name` como NOT NULL?
 2. Dos personas del hogar podrían llamarse igual. ¿Importa para el desplegable "De quién" del siguiente PR? ¿Cómo lo resolverías?
+
+## Conceptos del PR 12: apuntado por y pagado por
+
+| Rails | Python / FastAPI | En este repo |
+|---|---|---|
+| `belongs_to :created_by, class_name: "User"` | `relationship(foreign_keys=[created_by_id])` | `Expense.created_by` |
+| `belongs_to :paid_by, class_name: "User", optional: true` | `Mapped["User \| None"]` + FK `ondelete="SET NULL"` | `Expense.paid_by` |
+| `expense.created_by = Current.user` en el controlador | `created_by_id=user.id` en `create_expense` | |
+| `includes(:paid_by, :created_by)` | `selectinload(Expense.paid_by)`, `selectinload(Expense.created_by)` | `list_expenses` |
+| partial `_optional_select.html.erb` | componente `OptionalSelect` | `frontend/src/components/` |
+
+### Dos relaciones a la misma tabla
+`Expense` tiene dos claves foráneas a `users`. SQLAlchemy no puede adivinar cuál usa cada relación, así que cada una lo dice con `foreign_keys=[...]`. Es lo mismo que el `class_name` + `foreign_key` de Rails cuando el nombre de la asociación no coincide con el del modelo.
+
+### El autor lo pone el servidor, no el cliente
+`created_by_id` no está en `ExpenseCreate`, así que si un cliente lo envía, Pydantic lo ignora (por defecto descarta los campos que no conoce). El autor sale siempre de la sesión. Hay un test que lo intenta y comprueba que el autor sigue siendo el usuario que hace la petición.
+
+### Validar que pertenece al hogar
+Que `paid_by_id` sea un usuario que existe no basta: tiene que ser de **este** hogar. `ensure_references_exist` lo comprueba con un `EXISTS` sobre `memberships`. Sin eso, cualquiera podría poner como pagador a un usuario de otra familia, y su nombre aparecería en la lista.
+
+### "Sin asignar" no es un error
+Como el tipo, el pagador es opcional: se puede elegir al crear el gasto o más tarde. Mientras falte, la lista lo marca en naranja ("Sin pagador"), igual que "Sin clasificar". Así se ve de un vistazo qué gastos quedan por completar.
+
+Al crear un gasto desde la app, el formulario ya trae seleccionado al usuario que lo apunta, porque es lo habitual. El valor por defecto está en el **frontend**, no en la API: los gastos que lleguen por otras vías (importación del banco, n8n) entran sin pagador y se ven en naranja.
+
+### `key` para volver a montar un `<select>`
+`defaultValue` solo se aplica cuando el `<select>` se monta. Si el formulario aparece antes de que lleguen los miembros, la opción con tu nombre todavía no existe, y React no vuelve a seleccionarla cuando llega. `OptionalSelect` cambia su `key` al cargar las opciones: para React es un elemento nuevo, lo vuelve a montar y entonces sí aplica el valor por defecto.
+
+### Cambiar el diseño antes del merge
+La primera versión de este PR guardaba "de quién es el gasto". Al revisarlo vimos que lo que importa es quién lo paga, por los ingresos. Como la migración aún no había llegado a `main`, la he rehecho (en desarrollo: `alembic downgrade -1`, borrar el fichero y volver a autogenerar) en lugar de añadir otra migración que renombrase la columna. Una vez mergeada, una migración ya no se toca: se añade otra.
+
+### Extraer al segundo uso (frontend)
+El desplegable "Tipo" y el nuevo "Pagado por" eran iguales: etiqueta con "(opcional)", una opción vacía y una lista que viene de la API. Ahora los dos usan `OptionalSelect`. El `""` de la opción vacía se convierte en `null` con `Number(...) || null`: `Number("")` es `0`, y ningún id es `0`.
+
+## Preguntas para revisar el PR 12
+1. ¿Qué pasaría si `ExpenseCreate` tuviera un campo `created_by_id` opcional "por si acaso"?
+2. ¿Por qué `paid_by_id` tiene `ON DELETE SET NULL` y `created_by_id` no tiene `ON DELETE`? ¿Qué pasaría si `created_by_id` tuviera `CASCADE`?
+3. La lista hace 5 consultas (gastos + 4 `selectinload`), da igual cuántos gastos haya. ¿Cuántas haría sin los `selectinload`, con 50 gastos?
+4. Cuando lleguen los ingresos por persona, ¿cómo sería la consulta de "gastado por cada miembro este mes" en SQL?
