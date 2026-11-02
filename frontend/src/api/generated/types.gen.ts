@@ -41,6 +41,12 @@ export type ExpenseCreate = {
      */
     spending_type_id?: number | null;
     /**
+     * Member Id
+     *
+     * Whose expense it is; null: everyone's
+     */
+    member_id?: number | null;
+    /**
      * Spent On
      */
     spent_on?: string;
@@ -68,6 +74,8 @@ export type ExpenseRead = {
     spent_on: string;
     category: CategoryRead;
     spending_type: SpendingTypeRead | null;
+    member: MemberRead | null;
+    created_by: MemberRead;
     /**
      * Created At
      */
@@ -77,7 +85,8 @@ export type ExpenseRead = {
 /**
  * ExpenseUpdate
  *
- * Partial update: only the fields sent are changed. `spending_type_id: null` unclassifies.
+ * Partial update: only the fields sent are changed. `spending_type_id: null` unclassifies,
+ * `member_id: null` makes it the whole household's.
  */
 export type ExpenseUpdate = {
     /**
@@ -96,6 +105,10 @@ export type ExpenseUpdate = {
      * Spending Type Id
      */
     spending_type_id?: number | null;
+    /**
+     * Member Id
+     */
+    member_id?: number | null;
     /**
      * Spent On
      */
@@ -166,6 +179,22 @@ export type LogIn = {
      * Password
      */
     password: string;
+};
+
+/**
+ * MemberRead
+ *
+ * A household member as other members see them: name only, never the email.
+ */
+export type MemberRead = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Name
+     */
+    name: string;
 };
 
 /**
@@ -454,6 +483,38 @@ export type UpdateExpenseResponses = {
 };
 
 export type UpdateExpenseResponse = UpdateExpenseResponses[keyof UpdateExpenseResponses];
+
+export type ListMembersData = {
+    body?: never;
+    path: {
+        /**
+         * Household Id
+         */
+        household_id: number;
+    };
+    query?: never;
+    url: '/api/households/{household_id}/members';
+};
+
+export type ListMembersErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListMembersError = ListMembersErrors[keyof ListMembersErrors];
+
+export type ListMembersResponses = {
+    /**
+     * Response List Members
+     *
+     * Successful Response
+     */
+    200: Array<MemberRead>;
+};
+
+export type ListMembersResponse = ListMembersResponses[keyof ListMembersResponses];
 
 export type InviteToHouseholdData = {
     body?: never;

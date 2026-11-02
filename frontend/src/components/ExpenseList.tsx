@@ -54,6 +54,7 @@ export function ExpenseList({ month }: { month: string }) {
                       {expense.spending_type?.name ?? (
                         <span className="text-amber-600">Sin clasificar</span>
                       )}
+                      {expense.member && ` · ${expense.member.name}`}
                     </p>
                   </div>
                   <p className="shrink-0 font-semibold tabular-nums">

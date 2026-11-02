@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateExpenseData, CreateExpenseErrors, CreateExpenseResponses, GetCurrentUserData, GetCurrentUserResponses, HealthData, HealthResponses, InviteToHouseholdData, InviteToHouseholdErrors, InviteToHouseholdResponses, ListCategoriesData, ListCategoriesResponses, ListExpensesData, ListExpensesErrors, ListExpensesResponses, ListSpendingTypesData, ListSpendingTypesResponses, LogInData, LogInErrors, LogInResponses, LogOutData, LogOutResponses, SignUpData, SignUpErrors, SignUpResponses, UpdateExpenseData, UpdateExpenseErrors, UpdateExpenseResponses } from './types.gen';
+import type { CreateExpenseData, CreateExpenseErrors, CreateExpenseResponses, GetCurrentUserData, GetCurrentUserResponses, HealthData, HealthResponses, InviteToHouseholdData, InviteToHouseholdErrors, InviteToHouseholdResponses, ListCategoriesData, ListCategoriesResponses, ListExpensesData, ListExpensesErrors, ListExpensesResponses, ListMembersData, ListMembersErrors, ListMembersResponses, ListSpendingTypesData, ListSpendingTypesResponses, LogInData, LogInErrors, LogInResponses, LogOutData, LogOutResponses, SignUpData, SignUpErrors, SignUpResponses, UpdateExpenseData, UpdateExpenseErrors, UpdateExpenseResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -130,6 +130,21 @@ export const updateExpense = <ThrowOnError extends boolean = false>(options: Opt
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * List Members
+ *
+ * The household's members, by name. Small by nature (a family), so not paginated.
+ */
+export const listMembers = <ThrowOnError extends boolean = false>(options: Options<ListMembersData, ThrowOnError>): RequestResult<ListMembersResponses, ListMembersErrors, ThrowOnError> => (options.client ?? client).get<ListMembersResponses, ListMembersErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }],
+    url: '/api/households/{household_id}/members',
+    ...options
 });
 
 /**
