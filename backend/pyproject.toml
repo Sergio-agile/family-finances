@@ -26,8 +26,13 @@ package = false
 line-length = 100
 
 [tool.ruff.lint]
-# FAST: FastAPI, PT: pytest, PERF: performance anti-patterns, RUF: Ruff's own rules.
-select = ["E", "F", "I", "UP", "B", "SIM", "FAST", "PT", "PERF", "RUF"]
+# FAST: FastAPI, PT: pytest, PERF: performance anti-patterns, RUF: Ruff's own rules,
+# S: security checks from Bandit (SQL built from strings, hardcoded secrets, unsafe calls…).
+select = ["E", "F", "I", "UP", "B", "SIM", "FAST", "PT", "PERF", "RUF", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+# pytest is built on `assert`, and test passwords are made up on purpose.
+"tests/**" = ["S101", "S105", "S106"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
