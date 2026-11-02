@@ -41,11 +41,11 @@ export type ExpenseCreate = {
      */
     spending_type_id?: number | null;
     /**
-     * Member Id
+     * Paid By Id
      *
-     * Whose expense it is; null: everyone's
+     * The member who paid; null: not assigned yet
      */
-    member_id?: number | null;
+    paid_by_id?: number | null;
     /**
      * Spent On
      */
@@ -74,7 +74,7 @@ export type ExpenseRead = {
     spent_on: string;
     category: CategoryRead;
     spending_type: SpendingTypeRead | null;
-    member: MemberRead | null;
+    paid_by: MemberRead | null;
     created_by: MemberRead;
     /**
      * Created At
@@ -85,8 +85,8 @@ export type ExpenseRead = {
 /**
  * ExpenseUpdate
  *
- * Partial update: only the fields sent are changed. `spending_type_id: null` unclassifies,
- * `member_id: null` makes it the whole household's.
+ * Partial update: only the fields sent are changed. `null` unassigns the optional
+ * `spending_type_id` and `paid_by_id`.
  */
 export type ExpenseUpdate = {
     /**
@@ -106,9 +106,9 @@ export type ExpenseUpdate = {
      */
     spending_type_id?: number | null;
     /**
-     * Member Id
+     * Paid By Id
      */
-    member_id?: number | null;
+    paid_by_id?: number | null;
     /**
      * Spent On
      */

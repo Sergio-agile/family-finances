@@ -51,7 +51,7 @@ def test_creates_an_expense(client, expenses_url, groceries):
     assert body["spent_on"] == "2026-10-20"
     assert body["category"] == {"id": groceries.id, "name": "Supermercado"}
     assert body["spending_type"] is None
-    assert body["member"] is None
+    assert body["paid_by"] is None
 
 
 def test_creation_records_who_wrote_it_down(client, expenses_url, groceries, user):
@@ -69,22 +69,22 @@ def test_creation_records_who_wrote_it_down(client, expenses_url, groceries, use
     assert response.json()["created_by"] == {"id": user.id, "name": "Ana"}
 
 
-def test_creates_an_expense_for_a_member(client, expenses_url, groceries, luis):
+def test_creates_an_expense_paid_by_a_member(client, expenses_url, groceries, luis):
     response = client.post(
         expenses_url,
         json={
             "amount_cents": 3000,
-            "concept": "Zapatillas",
+            "concept": "Clases de baile",
             "category_id": groceries.id,
-            "member_id": luis.id,
+            "paid_by_id": luis.id,
         },
     )
 
     assert response.status_code == 201
-    assert response.json()["member"] == {"id": luis.id, "name": "Luis"}
+    assert response.json()["paid_by"] == {"id": luis.id, "name": "Luis"}
 
 
-def test_rejects_a_member_of_another_household(client, session, expenses_url, groceries):
+def test_rejects_a_payer_from_another_household(client, session, expenses_url, groceries):
     outsider = User(name="Eva", email="eva@example.com", password_hash="unused")
     session.add(outsider)
     session.flush()
@@ -95,12 +95,12 @@ def test_rejects_a_member_of_another_household(client, session, expenses_url, gr
             "amount_cents": 100,
             "concept": "Algo",
             "category_id": groceries.id,
-            "member_id": outsider.id,
+            "paid_by_id": outsider.id,
         },
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"] == "Member does not belong to this household"
+    assert response.json()["detail"] == "Payer does not belong to this household"
 
 
 def test_creates_an_expense_with_a_spending_type(client, expenses_url, groceries, ant_spending):
@@ -195,26 +195,24 @@ def test_lists_the_spending_type_of_each_expense(client, expenses_url, make_expe
     ]
 
 
-def test_lists_whose_expense_it_is_and_who_wrote_it_down(
-    client, expenses_url, make_expense, user, luis
-):
-    make_expense(member_id=luis.id, spent_on=date(2026, 10, 2))
+def test_lists_who_paid_and_who_wrote_it_down(client, expenses_url, make_expense, user, luis):
+    make_expense(paid_by_id=luis.id, spent_on=date(2026, 10, 2))
     make_expense(spent_on=date(2026, 10, 1))
 
     expenses = client.get(expenses_url, params={"month": "2026-10"}).json()
 
-    assert [e["member"] for e in expenses] == [{"id": luis.id, "name": "Luis"}, None]
+    assert [e["paid_by"] for e in expenses] == [{"id": luis.id, "name": "Luis"}, None]
     assert [e["created_by"]["name"] for e in expenses] == ["Ana", "Ana"]
 
 
-def test_reassigns_an_expense_and_back_to_the_household(client, expenses_url, make_expense, luis):
+def test_assigns_the_payer_later_and_unassigns_it(client, expenses_url, make_expense, luis):
     expense = make_expense()
 
-    assigned = client.patch(f"{expenses_url}/{expense.id}", json={"member_id": luis.id})
-    unassigned = client.patch(f"{expenses_url}/{expense.id}", json={"member_id": None})
+    assigned = client.patch(f"{expenses_url}/{expense.id}", json={"paid_by_id": luis.id})
+    unassigned = client.patch(f"{expenses_url}/{expense.id}", json={"paid_by_id": None})
 
-    assert assigned.json()["member"] == {"id": luis.id, "name": "Luis"}
-    assert unassigned.json()["member"] is None
+    assert assigned.json()["paid_by"] == {"id": luis.id, "name": "Luis"}
+    assert unassigned.json()["paid_by"] is None
     assert unassigned.json()["created_by"]["name"] == "Ana"
 
 

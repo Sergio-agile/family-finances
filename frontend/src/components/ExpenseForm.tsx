@@ -47,7 +47,7 @@ export function ExpenseForm({ expense, onSaved }: Props) {
       concept: String(data.get('concept')),
       category_id: Number(data.get('category_id')),
       spending_type_id: optionalId('spending_type_id'),
-      member_id: optionalId('member_id'),
+      paid_by_id: optionalId('paid_by_id'),
       spent_on: String(data.get('spent_on')),
     }
 
@@ -136,11 +136,11 @@ export function ExpenseForm({ expense, onSaved }: Props) {
           defaultValue={expense?.spending_type?.id}
         />
         <OptionalSelect
-          name="member_id"
-          label="De quién"
-          emptyLabel="Del hogar"
+          name="paid_by_id"
+          label="Pagado por"
+          emptyLabel="Sin asignar"
           options={members}
-          defaultValue={expense?.member?.id}
+          defaultValue={expense?.paid_by?.id}
         />
       </div>
 

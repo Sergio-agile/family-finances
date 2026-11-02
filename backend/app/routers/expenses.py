@@ -27,13 +27,13 @@ def ensure_references_exist(session: Session, household_id: int, fields: dict) -
         if id_ is not None and session.get(model, id_) is None:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"{label} does not exist")
 
-    member_id = fields.get("member_id")
+    paid_by_id = fields.get("paid_by_id")
     is_member = exists().where(
-        Membership.user_id == member_id, Membership.household_id == household_id
+        Membership.user_id == paid_by_id, Membership.household_id == household_id
     )
-    if member_id is not None and not session.scalar(select(is_member)):
+    if paid_by_id is not None and not session.scalar(select(is_member)):
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_CONTENT, "Member does not belong to this household"
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Payer does not belong to this household"
         )
 
 
@@ -48,7 +48,7 @@ def list_expenses(household: CurrentHousehold, session: SessionDep, month: Month
         .options(
             selectinload(Expense.category),
             selectinload(Expense.spending_type),
-            selectinload(Expense.member),
+            selectinload(Expense.paid_by),
             selectinload(Expense.created_by),
         )
         .where(

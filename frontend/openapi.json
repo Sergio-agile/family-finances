@@ -548,7 +548,7 @@
             ],
             "title": "Spending Type Id"
           },
-          "member_id": {
+          "paid_by_id": {
             "anyOf": [
               {
                 "type": "integer"
@@ -557,8 +557,8 @@
                 "type": "null"
               }
             ],
-            "title": "Member Id",
-            "description": "Whose expense it is; null: everyone's"
+            "title": "Paid By Id",
+            "description": "The member who paid; null: not assigned yet"
           },
           "spent_on": {
             "type": "string",
@@ -606,7 +606,7 @@
               }
             ]
           },
-          "member": {
+          "paid_by": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/MemberRead"
@@ -633,7 +633,7 @@
           "spent_on",
           "category",
           "spending_type",
-          "member",
+          "paid_by",
           "created_by",
           "created_at"
         ],
@@ -688,7 +688,7 @@
             ],
             "title": "Spending Type Id"
           },
-          "member_id": {
+          "paid_by_id": {
             "anyOf": [
               {
                 "type": "integer"
@@ -697,7 +697,7 @@
                 "type": "null"
               }
             ],
-            "title": "Member Id"
+            "title": "Paid By Id"
           },
           "spent_on": {
             "anyOf": [
@@ -714,7 +714,7 @@
         },
         "type": "object",
         "title": "ExpenseUpdate",
-        "description": "Partial update: only the fields sent are changed. `spending_type_id: null` unclassifies,\n`member_id: null` makes it the whole household's."
+        "description": "Partial update: only the fields sent are changed. `null` unassigns the optional\n`spending_type_id` and `paid_by_id`."
       },
       "HTTPValidationError": {
         "properties": {

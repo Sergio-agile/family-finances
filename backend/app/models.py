@@ -59,15 +59,15 @@ class Expense(Base):
     spent_on: Mapped[date]
     # Who wrote it down: set by the API from the session, never editable.
     created_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    # Whose expense it is (Ana's clothes, Sergio's gym). None: the whole household's.
-    member_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    # Whose money paid it, whoever it was for. None: not assigned yet (the app flags it).
+    paid_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     category: Mapped[Category] = relationship()
     spending_type: Mapped[SpendingType | None] = relationship()
     # Two foreign keys to users, so each relationship says which one it follows.
     created_by: Mapped["User"] = relationship(foreign_keys=[created_by_id])
-    member: Mapped["User | None"] = relationship(foreign_keys=[member_id])
+    paid_by: Mapped["User | None"] = relationship(foreign_keys=[paid_by_id])
 
 
 class User(Base):

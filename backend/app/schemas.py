@@ -45,20 +45,22 @@ class ExpenseCreate(BaseModel):
     concept: Concept
     category_id: int
     spending_type_id: int | None = None
-    member_id: int | None = Field(default=None, description="Whose expense it is; null: everyone's")
+    paid_by_id: int | None = Field(
+        default=None, description="The member who paid; null: not assigned yet"
+    )
     # Fallback only: the client should send the date in the user's own timezone.
     spent_on: date = Field(default_factory=date.today)
 
 
 class ExpenseUpdate(BaseModel):
-    """Partial update: only the fields sent are changed. `spending_type_id: null` unclassifies,
-    `member_id: null` makes it the whole household's."""
+    """Partial update: only the fields sent are changed. `null` unassigns the optional
+    `spending_type_id` and `paid_by_id`."""
 
     amount_cents: int | None = Field(default=None, gt=0)
     concept: Concept | None = None
     category_id: int | None = None
     spending_type_id: int | None = None
-    member_id: int | None = None
+    paid_by_id: int | None = None
     spent_on: date | None = None
 
     @field_validator("amount_cents", "concept", "category_id", "spent_on")
@@ -79,7 +81,7 @@ class ExpenseRead(BaseModel):
     spent_on: date
     category: CategoryRead
     spending_type: SpendingTypeRead | None
-    member: MemberRead | None
+    paid_by: MemberRead | None
     created_by: MemberRead
     created_at: datetime
 
