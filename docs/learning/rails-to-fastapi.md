@@ -420,3 +420,30 @@ El desplegable "Tipo" y el nuevo "Pagado por" eran iguales: etiqueta con "(opcio
 2. ¿Por qué `paid_by_id` tiene `ON DELETE SET NULL` y `created_by_id` no tiene `ON DELETE`? ¿Qué pasaría si `created_by_id` tuviera `CASCADE`?
 3. La lista hace 5 consultas (gastos + 4 `selectinload`), da igual cuántos gastos haya. ¿Cuántas haría sin los `selectinload`, con 50 gastos?
 4. Cuando lleguen los ingresos por persona, ¿cómo sería la consulta de "gastado por cada miembro este mes" en SQL?
+
+## Conceptos del PR 13: límite de intentos
+
+| Rails | Python / FastAPI | En este repo |
+|---|---|---|
+| `rate_limit to: 10, within: 3.minutes, only: :create` (Rails 8, usa la caché) | `ensure_not_throttled` + tabla `auth_failures` | `app/throttling.py` |
+| `Rack::Attack` | lo mismo, a mano, en Postgres | ADR 0008 |
+| `request.remote_ip` | `request.client.host` (con `--proxy-headers` detrás de un proxy) | `client_ip` |
+| `head :too_many_requests` | `HTTPException(429, headers={"Retry-After": "900"})` | |
+
+### Por qué en Postgres y no en memoria
+El `rate_limit` de Rails 8 guarda los contadores en `Rails.cache` (en producción, Redis o Solid Cache). La librería típica de FastAPI, slowapi, los guarda en memoria del proceso: se pierden al reiniciar y no se comparten si arrancas varios procesos. Con una tabla en Postgres no hace falta ningún servicio más. Son dos `COUNT` con índice por login, nada que se note.
+
+### Commit antes de lanzar el error
+`record_failure` hace `commit` justo antes de que el endpoint lance el 401. Sin ese commit, la excepción haría rollback y el fallo no quedaría guardado: el contador nunca subiría.
+
+### Tests que se comportan como producción
+En producción, una petición que falla cierra su sesión sin commit y todo lo que no se había confirmado se deshace. En los tests compartimos una sesión entre peticiones, y eso no pasaba. Ahora el override de `get_session` en `conftest.py` hace commit de lo que el test ha preparado (al acabar el test se deshace todo igualmente) y rollback si la petición falla. Sin eso, el test de "un email repetido no gasta la invitación" daba un falso fallo.
+
+### Frontend: errores con su código HTTP
+El cliente generado, con `throwOnError: true`, lanza el cuerpo del error (`{detail: …}`) pero no el código HTTP. Para login y registro, `dataOrThrow` lanza un `ApiError` con el `status`. Así la pantalla distingue 401 (contraseña), 409 (email ya usado), 400 (invitación gastada) y 429 (demasiados intentos), cada uno con su mensaje en castellano.
+
+## Preguntas para revisar el PR 13
+1. ¿Por qué `ensure_not_throttled` se comprueba **antes** de verificar la contraseña? ¿Qué aprendería un atacante si lo hiciéramos después?
+2. Si en producción olvidamos `--proxy-headers`, ¿qué IP verían todas las peticiones? ¿Qué pasaría con el límite de 20 por IP?
+3. ¿Por qué el registro comprueba ahora la invitación antes que el email?
+4. Alguien falla 5 veces con el email de tu pareja. ¿Qué ve ella al intentar entrar? ¿Cuánto dura?
