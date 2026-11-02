@@ -9,7 +9,7 @@ Built as a portfolio project with a Python/FastAPI backend and a React/TypeScrip
 - **Backend:** FastAPI, SQLAlchemy 2, PostgreSQL, managed with [uv](https://docs.astral.sh/uv/)
 - **Frontend:** React + TypeScript, Vite, TanStack Query, Tailwind CSS
 - **Automation:** webhooks for n8n / Make
-- **CI:** GitHub Actions (lint, format, tests, build)
+- **CI:** GitHub Actions (lint, format, tests, build) plus security: Ruff's Bandit rules, `pip-audit`, `npm audit`, gitleaks on the whole history, and weekly Dependabot updates
 
 Why these choices: see [docs/decisions](docs/decisions).
 

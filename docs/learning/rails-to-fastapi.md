@@ -447,3 +447,36 @@ El cliente generado, con `throwOnError: true`, lanza el cuerpo del error (`{deta
 2. Si en producción olvidamos `--proxy-headers`, ¿qué IP verían todas las peticiones? ¿Qué pasaría con el límite de 20 por IP?
 3. ¿Por qué el registro comprueba ahora la invitación antes que el email?
 4. Alguien falla 5 veces con el email de tu pareja. ¿Qué ve ella al intentar entrar? ¿Cuánto dura?
+
+## Conceptos del PR 14: seguridad en CI
+
+| Rails | Python / React | En este repo |
+|---|---|---|
+| Brakeman | Ruff con las reglas `S` (las de Bandit) | `backend/pyproject.toml` |
+| `bundler-audit` | `pip-audit` sobre las versiones exactas de `uv.lock` | job `backend` |
+| `bundler-audit` (para JS) | `npm audit` | job `frontend` |
+| — | gitleaks: busca secretos en todo el historial | job `secrets` |
+| Dependabot | Dependabot (igual) | `.github/dependabot.yml` |
+
+### Ruff `S`: Brakeman dentro del linter
+Las reglas `S` buscan patrones peligrosos: SQL construido concatenando cadenas, contraseñas escritas en el código, `subprocess` con `shell=True`, `pickle`, etc. En el código de la app no ha salido nada. En los tests solo avisaba de `assert` (pytest funciona así) y de las contraseñas de prueba, que son inventadas: esas tres reglas se ignoran solo en `tests/`.
+
+### `pip-audit` sobre lo que de verdad se instala
+`uv export --frozen` saca de `uv.lock` las versiones exactas, con sus hashes, y `pip-audit --disable-pip --require-hashes` las comprueba contra la base de datos de vulnerabilidades de Python sin instalar nada. `--strict` hace fallar el CI si algo no se puede comprobar.
+
+### `npm audit` y los `overrides`
+Había 4 vulnerabilidades altas en `js-yaml`, una dependencia del generador del cliente (solo de desarrollo). `npm audit fix --force` las "arreglaba" bajando el generador a una versión anterior con cambios incompatibles. En su lugar, `"overrides": {"js-yaml": "^4.3.2"}` en `package.json` obliga a todo el árbol a usar la versión corregida, dentro de la misma versión mayor. Es como fijar una gema indirecta en el `Gemfile`. He comprobado que el generador produce exactamente el mismo cliente.
+
+### gitleaks: el historial también cuenta
+Borrar un secreto en un commit nuevo no lo quita de los anteriores, y el repo es público. Por eso el job hace checkout de **todo** el historial (`fetch-depth: 0`). Descarga una versión fija de gitleaks y comprueba su SHA-256 antes de ejecutarla: si alguien cambiase el fichero publicado, el CI fallaría en lugar de ejecutar código desconocido.
+
+### Una vez por semana aunque no toques nada
+Las vulnerabilidades se publican cualquier día. El `schedule` del workflow lo ejecuta cada lunes, así que una vulnerabilidad nueva en una dependencia pone el CI en rojo aunque nadie haya abierto un PR.
+
+### Permisos mínimos
+`permissions: contents: read` deja al token del workflow solo leer el código. Si una action de terceros estuviese comprometida, no podría escribir en el repo.
+
+## Preguntas para revisar el PR 14
+1. ¿Por qué no usar `npm audit fix --force`? ¿Qué habría cambiado?
+2. Si mañana alguien sube un `.env` con una clave y la borra en el commit siguiente, ¿la detectaría gitleaks? ¿Bastaría con borrarla?
+3. Un PR tuyo falla por `pip-audit` por una vulnerabilidad que no tiene nada que ver con tu cambio. ¿Qué harías?
