@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import {
   useCategories,
   useCreateExpense,
+  useCurrentUser,
   useMembers,
   useSpendingTypes,
   useUpdateExpense,
@@ -23,6 +24,7 @@ export function ExpenseForm({ expense, onSaved }: Props) {
   const categories = useCategories()
   const spendingTypes = useSpendingTypes()
   const members = useMembers()
+  const currentUser = useCurrentUser()
   const createExpense = useCreateExpense()
   const updateExpense = useUpdateExpense()
   const mutation = expense ? updateExpense : createExpense
@@ -140,7 +142,8 @@ export function ExpenseForm({ expense, onSaved }: Props) {
           label="Pagado por"
           emptyLabel="Sin asignar"
           options={members}
-          defaultValue={expense?.paid_by?.id}
+          // A new expense is usually paid by whoever writes it down; it can be changed.
+          defaultValue={expense ? expense.paid_by?.id : currentUser.data?.id}
         />
       </div>
 

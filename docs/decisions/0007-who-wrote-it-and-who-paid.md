@@ -11,8 +11,8 @@ Who *wrote it down* is a separate fact: useful when reviewing changes, but not p
 ## Decision
 
 - **`created_by_id`** (NOT NULL): set by the API from the session on create, never accepted from the client, never editable. Shown when an expense is opened ("Apuntado por …").
-- **`paid_by_id`** (optional): the member who paid, chosen in the form ("Pagado por"). It must be a member of the expense's household (422 otherwise). If that user is deleted, it goes back to `NULL`.
-- An expense without a payer is **not assigned yet**, like an expense without a spending type. The list flags it in amber ("Sin pagador") so it gets filled in later.
+- **`paid_by_id`** (optional): the member who paid, chosen in the form ("Pagado por"). The form preselects the logged-in user, since whoever writes an expense down usually paid it; it can be changed then or later (someone else handed over the cash). It must be a member of the expense's household (422 otherwise). If that user is deleted, it goes back to `NULL`.
+- The API does not default the payer: an expense without one (from a bank import, n8n…) is **not assigned yet**, like an expense without a spending type. The list flags it in amber ("Sin pagador") so it gets filled in later.
 - Members are shown by **name**, never by email: `GET /api/households/{id}/members` returns `id` and `name` only.
 - **Who it was for** is not recorded. If it is ever needed, it becomes another optional field.
 

@@ -18,6 +18,9 @@ export function OptionalSelect({ name, label, emptyLabel, options, defaultValue 
         {label} <span className="font-normal text-gray-400">(opcional)</span>
       </span>
       <select
+        // defaultValue only applies when a select mounts: remount it once the options arrive, so
+        // a default pointing to one of them is selected even if the form showed up first.
+        key={options.isSuccess ? 'loaded' : 'loading'}
         name={name}
         disabled={!options.isSuccess}
         defaultValue={defaultValue ?? ''}

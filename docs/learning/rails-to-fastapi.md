@@ -404,6 +404,11 @@ Que `paid_by_id` sea un usuario que existe no basta: tiene que ser de **este** h
 ### "Sin asignar" no es un error
 Como el tipo, el pagador es opcional: se puede elegir al crear el gasto o más tarde. Mientras falte, la lista lo marca en naranja ("Sin pagador"), igual que "Sin clasificar". Así se ve de un vistazo qué gastos quedan por completar.
 
+Al crear un gasto desde la app, el formulario ya trae seleccionado al usuario que lo apunta, porque es lo habitual. El valor por defecto está en el **frontend**, no en la API: los gastos que lleguen por otras vías (importación del banco, n8n) entran sin pagador y se ven en naranja.
+
+### `key` para volver a montar un `<select>`
+`defaultValue` solo se aplica cuando el `<select>` se monta. Si el formulario aparece antes de que lleguen los miembros, la opción con tu nombre todavía no existe, y React no vuelve a seleccionarla cuando llega. `OptionalSelect` cambia su `key` al cargar las opciones: para React es un elemento nuevo, lo vuelve a montar y entonces sí aplica el valor por defecto.
+
 ### Cambiar el diseño antes del merge
 La primera versión de este PR guardaba "de quién es el gasto". Al revisarlo vimos que lo que importa es quién lo paga, por los ingresos. Como la migración aún no había llegado a `main`, la he rehecho (en desarrollo: `alembic downgrade -1`, borrar el fichero y volver a autogenerar) en lugar de añadir otra migración que renombrase la columna. Una vez mergeada, una migración ya no se toca: se añade otra.
 
