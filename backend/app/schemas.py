@@ -12,6 +12,7 @@ from pydantic import (
 )
 
 Concept = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+PersonName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
 # Lowercased so "Ana@Example.com" and "ana@example.com" are the same account.
 Email = Annotated[EmailStr, AfterValidator(str.lower)]
 
@@ -70,6 +71,7 @@ class ExpenseRead(BaseModel):
 
 
 class SignUp(BaseModel):
+    name: PersonName
     email: Email
     # Length is what makes a password strong; no composition rules (NIST SP 800-63B).
     password: str = Field(min_length=12, max_length=128)
@@ -94,6 +96,7 @@ class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    name: str
     email: str
     households: list[HouseholdRead]
 

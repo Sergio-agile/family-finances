@@ -69,6 +69,8 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     # Stored lowercased (see schemas.Email), so the unique constraint is case-insensitive.
     email: Mapped[str] = mapped_column(String(254), unique=True)
+    # How the household sees this person ("Ana"): the email is never shown to other members.
+    name: Mapped[str] = mapped_column(String(50))
     # Argon2id hash in PHC format: algorithm, parameters and salt travel with the hash.
     password_hash: Mapped[str] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

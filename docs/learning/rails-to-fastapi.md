@@ -358,3 +358,26 @@ Como `seed.py`, `app/invitations.py` se puede ejecutar como script. `argparse` e
 2. ¿Por qué el registro comprueba el email antes de consumir la invitación? ¿Qué pasaría si lo hiciera al revés?
 3. Si mañana abrimos el registro a otras familias, ¿qué cambiaría en `sign_up` y en `SignUp`?
 4. Cualquier miembro puede invitar. ¿Cuándo empezaría a importar tener roles (owner/member)?
+
+## Conceptos del PR 11: nombres de usuario
+
+Hay pocas piezas nuevas: es una columna más, con su migración y su campo en el registro.
+
+| Rails | Python / FastAPI | En este repo |
+|---|---|---|
+| `validates :name, presence: true, length: { maximum: 50 }` + `strip` en un callback | tipo `PersonName` (`StringConstraints`) | `app/schemas.py` |
+| `update_all("name = split_part(email, '@', 1)")` en la migración | `op.execute("UPDATE …")` | `…_add_name_to_users.py` |
+| helper de specs en `spec/support/` | función normal en `conftest.py` | `sign_up()` |
+
+### Un tipo con nombre, reutilizable
+`PersonName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]` funciona igual que `Concept`: quita espacios, no deja que quede vacío y limita la longitud. Se define una vez y se usa en cualquier esquema que reciba un nombre.
+
+### El email es privado; el nombre, no
+Los demás miembros del hogar verán tu nombre, nunca tu email. Por eso el nombre es obligatorio al registrarse y es lo que muestra la app.
+
+### Helpers en `conftest.py`
+Además de fixtures, `conftest.py` puede tener funciones normales. `sign_up(client, token, **changes)` construye un registro válido y deja cambiar cualquier campo: `sign_up(client, token, name="   ")` para probar un nombre vacío. Antes había el mismo payload copiado en dos ficheros de tests.
+
+## Preguntas para revisar el PR 11
+1. ¿Por qué la migración no puede añadir directamente `name` como NOT NULL?
+2. Dos personas del hogar podrían llamarse igual. ¿Importa para el desplegable "De quién" del siguiente PR? ¿Cómo lo resolverías?

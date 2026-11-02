@@ -61,7 +61,7 @@ function Home({ user }: { user: UserRead }) {
       <InviteSection householdName={user.households[0].name} />
 
       <footer className="flex items-center justify-between gap-3 text-sm text-gray-500">
-        <span className="truncate">{user.email}</span>
+        <span className="truncate">{user.name}</span>
         <button
           type="button"
           onClick={() => logOut.mutate()}

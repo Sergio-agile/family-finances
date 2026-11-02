@@ -64,6 +64,17 @@ def session(engine):
 PASSWORD = "correct horse battery staple"
 
 
+def sign_up(client, invitation_token, **changes):
+    """POST a valid sign-up for Luis; `changes` overrides any field."""
+    payload = {
+        "name": "Luis",
+        "email": "luis@example.com",
+        "password": PASSWORD,
+        "invitation_token": invitation_token,
+    }
+    return client.post("/api/auth/signup", json=payload | changes)
+
+
 @pytest.fixture
 def anonymous_client(session):
     """HTTP client whose requests use the test session instead of the real database."""
@@ -85,6 +96,7 @@ def household(session) -> Household:
 def user(session, household) -> User:
     """A member of `household`."""
     user = User(
+        name="Ana",
         email="ana@example.com",
         password_hash=password_hash.hash(PASSWORD),
         households=[household],

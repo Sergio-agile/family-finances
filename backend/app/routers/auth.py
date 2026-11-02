@@ -26,7 +26,11 @@ def sign_up(payload: SignUp, session: SessionDep, response: Response) -> User:
     if household_id is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid or expired invitation")
 
-    user = User(email=payload.email, password_hash=password_hash.hash(payload.password))
+    user = User(
+        name=payload.name,
+        email=payload.email,
+        password_hash=password_hash.hash(payload.password),
+    )
     session.add(user)
     session.flush()
     session.add(Membership(user_id=user.id, household_id=household_id))

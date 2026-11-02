@@ -45,7 +45,7 @@ export function AuthScreen() {
       logIn.mutate(credentials)
     } else {
       signUp.mutate(
-        { ...credentials, invitation_token: invitation! },
+        { ...credentials, name: String(data.get('name')), invitation_token: invitation! },
         // The invitation is used up: drop it from the URL so a later logout shows plain login.
         { onSuccess: () => history.replaceState(null, '', window.location.pathname) },
       )
@@ -63,6 +63,22 @@ export function AuthScreen() {
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl bg-white p-4 shadow-sm">
         <h2 className="text-lg font-semibold">{text.title}</h2>
+
+        {mode === 'signup' && (
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-gray-700">Nombre</span>
+            <input
+              name="name"
+              required
+              maxLength={50}
+              autoComplete="given-name"
+              className={inputClass}
+            />
+            <span className="mt-1 block text-sm text-gray-500">
+              Es como te verán los demás en el hogar.
+            </span>
+          </label>
+        )}
 
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-gray-700">Email</span>
