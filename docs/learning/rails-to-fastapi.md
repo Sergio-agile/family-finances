@@ -480,3 +480,36 @@ Las vulnerabilidades se publican cualquier día. El `schedule` del workflow lo e
 1. ¿Por qué no usar `npm audit fix --force`? ¿Qué habría cambiado?
 2. Si mañana alguien sube un `.env` con una clave y la borra en el commit siguiente, ¿la detectaría gitleaks? ¿Bastaría con borrarla?
 3. Un PR tuyo falla por `pip-audit` por una vulnerabilidad que no tiene nada que ver con tu cambio. ¿Qué harías?
+
+## Conceptos del PR 15: endurecer producción
+
+| Rails | Python / FastAPI | En este repo |
+|---|---|---|
+| `Rails.env.production?` | `settings.is_production` (`ENVIRONMENT`) | `app/config.py` |
+| `config.force_ssl = true` (HSTS incluido) | cabecera `Strict-Transport-Security` en producción | `SECURITY_HEADERS` |
+| `config.hosts << "finanzas.example.com"` (HostAuthorization) | `TrustedHostMiddleware(allowed_hosts=…)` | `app/main.py` |
+| `config.action_dispatch.default_headers` | middleware `add_security_headers` | `app/main.py` |
+| validar `credentials` al arrancar | `@model_validator` en `Settings` | `refuse_unsafe_production` |
+
+### Fallar al arrancar, no en producción
+`Settings` comprueba sus propios valores con un `model_validator`. En producción, si la cookie no es `Secure`, `APP_URL` no es HTTPS o no hay lista de dominios, Pydantic lanza un error y la app no llega a arrancar. Es mejor un deploy que falla en el primer segundo que una app funcionando con una configuración insegura sin que nadie lo sepa.
+
+### Cabeceras de seguridad
+Son instrucciones para el navegador:
+- `Cache-Control: no-store`: no guardes esta respuesta en disco. Los datos financieros solo viven en la memoria de TanStack Query.
+- `Content-Security-Policy: default-src 'none'`: esta respuesta no puede cargar nada (scripts, imágenes…). Para un JSON es lo correcto, y si un atacante consiguiera que el navegador la abriese como página, no se ejecutaría nada.
+- `frame-ancestors 'none'`: ninguna web puede meterla en un `<iframe>`.
+- `nosniff`: el navegador no "adivina" el tipo del contenido; si es JSON, es JSON.
+- `Strict-Transport-Security`: durante dos años, este dominio solo por HTTPS. Solo en producción, porque en desarrollo usamos HTTP.
+
+### El orden de los middlewares
+En Starlette, el último middleware que se añade es el más externo: recibe la petición el primero y devuelve la respuesta el último. Por eso `add_security_headers` se declara al final: así envuelve a todos los demás, y hasta el 403 de la comprobación de `Origin` o el 400 de un `Host` desconocido llevan las cabeceras. Un test lo comprueba.
+
+### `TrustedHostMiddleware`
+La cabecera `Host` la escribe el cliente, así que se puede falsear. Nosotros la usamos para dos cosas: comparar con `Origin` (CSRF) y construir los enlaces de invitación. Con una lista de dominios permitidos, una petición con otro `Host` recibe un 400 antes de llegar a nada.
+
+## Preguntas para revisar el PR 15
+1. ¿Por qué no basta con poner `ENVIRONMENT=production` y confiar en acordarse del resto de variables?
+2. Si `add_security_headers` se declarase antes que `check_origin`, ¿qué respuesta se quedaría sin cabeceras?
+3. HSTS dura dos años. ¿Qué pasaría si lo activásemos en un dominio que todavía no tiene HTTPS funcionando?
+4. ¿Por qué el error de configuración no debe mostrar los valores (`hide_input_in_errors`)?
