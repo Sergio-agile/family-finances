@@ -1,12 +1,14 @@
 from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, Request, status
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from pydantic import BaseModel
 from sqlalchemy import text
 
 from app.auth import current_user
+from app.config import settings
 from app.db import SessionDep
 from app.routers import auth, categories, expenses, households, invitations, spending_types
 
@@ -17,7 +19,10 @@ def operation_id(route: APIRoute) -> str:
     return route.name
 
 
-app = FastAPI(title="Family Finances API", generate_unique_id_function=operation_id)
+# No interactive docs nor schema in production: nobody needs a map of the API there. The
+# frontend client is generated from `app.openapi()` in development, which is not affected.
+docs = {"docs_url": None, "redoc_url": None, "openapi_url": None} if settings.is_production else {}
+app = FastAPI(title="Family Finances API", generate_unique_id_function=operation_id, **docs)
 app.include_router(auth.router)
 # Everything else needs a logged-in user. Declared here, once, so no router can forget it.
 for router in (
@@ -29,6 +34,9 @@ for router in (
 ):
     app.include_router(router, dependencies=[Depends(current_user)])
 
+
+# Middleware runs outermost-last-added: security headers, then the Host check, then the Origin
+# check, then the endpoint. So even a rejected request gets the security headers.
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
@@ -46,6 +54,31 @@ async def check_origin(request: Request, call_next):
     ):
         return JSONResponse({"detail": "Cross-origin request"}, status.HTTP_403_FORBIDDEN)
     return await call_next(request)
+
+
+# The Origin check and invitation links trust the Host header: only accept our own domains.
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+
+SECURITY_HEADERS = {
+    # Financial data: no browser or proxy keeps a copy (TanStack Query caches in memory).
+    "Cache-Control": "no-store",
+    # The API only returns JSON: it may load nothing and be framed by no page.
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+}
+if settings.is_production:
+    # Browsers will only use HTTPS for this domain for the next two years.
+    SECURITY_HEADERS["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    # Swagger, only in development, needs scripts and styles from its CDN.
+    if not request.url.path.startswith(("/docs", "/redoc")):
+        response.headers.update(SECURITY_HEADERS)
+    return response
 
 
 class Health(BaseModel):
