@@ -133,3 +133,20 @@ class Invitation(Base):
     token_hash: Mapped[bytes] = mapped_column(LargeBinary(32), unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AuthFailure(Base):
+    """A failed login or sign-up, kept for a few minutes to throttle password guessing."""
+
+    __tablename__ = "auth_failures"
+    # The two lookups: recent failures of one account, and of one address.
+    __table_args__ = (
+        Index("ix_auth_failures_email_created_at", "email", "created_at"),
+        Index("ix_auth_failures_ip_created_at", "ip", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # None for sign-up failures: they count against the address only.
+    email: Mapped[str | None] = mapped_column(String(254))
+    ip: Mapped[str] = mapped_column(String(45))  # long enough for IPv6
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

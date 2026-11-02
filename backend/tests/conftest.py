@@ -78,7 +78,19 @@ def sign_up(client, invitation_token, **changes):
 @pytest.fixture
 def anonymous_client(session):
     """HTTP client whose requests use the test session instead of the real database."""
-    app.dependency_overrides[get_session] = lambda: session
+
+    def test_session():
+        # Behave like a real request against a real database: what the test prepared is already
+        # committed (the whole test still rolls back at the end), and a request that fails
+        # leaves nothing of its own behind, as its session closes without committing.
+        session.commit()
+        try:
+            yield session
+        except Exception:
+            session.rollback()
+            raise
+
+    app.dependency_overrides[get_session] = test_session
     # HTTPS, as in production: the session cookie is Secure and would not be sent over HTTP.
     yield TestClient(app, base_url="https://testserver")
     app.dependency_overrides.clear()

@@ -23,6 +23,23 @@ import {
 
 export const currentUserKey = ['current-user']
 
+/** A failed request that keeps its HTTP status, so the UI can tell errors apart. */
+export class ApiError extends Error {
+  status: number
+
+  constructor(status: number) {
+    super(`Request failed with status ${status}`)
+    this.status = status
+  }
+}
+
+/** The data of a successful call, or an `ApiError` with the response status. */
+async function dataOrThrow<T>(request: Promise<{ data?: T; response?: Response }>): Promise<T> {
+  const { data, response } = await request
+  if (!response?.ok) throw new ApiError(response?.status ?? 0)
+  return data as T
+}
+
 /** The logged-in user, or `null` when there is no session (the API answers 401). */
 export function useCurrentUser() {
   return useQuery({
@@ -48,11 +65,11 @@ function useStartSession<Body>(request: (body: Body) => Promise<UserRead>) {
 }
 
 export function useLogIn() {
-  return useStartSession(async (body: LogIn) => (await logIn({ body, throwOnError: true })).data)
+  return useStartSession((body: LogIn) => dataOrThrow(logIn({ body })))
 }
 
 export function useSignUp() {
-  return useStartSession(async (body: SignUp) => (await signUp({ body, throwOnError: true })).data)
+  return useStartSession((body: SignUp) => dataOrThrow(signUp({ body })))
 }
 
 export function useLogOut() {

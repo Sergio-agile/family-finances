@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { useLogIn, useSignUp } from '../api/queries'
+import { ApiError, useLogIn, useSignUp } from '../api/queries'
 import { readInvitation } from '../lib/invitation'
 import { inputClass, primaryButtonClass } from './styles'
 
@@ -9,7 +9,7 @@ const copy = {
     title: 'Entrar',
     submit: 'Entrar',
     pending: 'Entrando…',
-    error: 'Email o contraseña incorrectos.',
+    errors: { 401: 'Email o contraseña incorrectos.' } as Record<number, string>,
     switchPrompt: '¿Vienes por la invitación?',
     switchTo: 'Crear cuenta',
   },
@@ -17,11 +17,23 @@ const copy = {
     title: 'Crear cuenta',
     submit: 'Crear cuenta',
     pending: 'Creando…',
-    error:
-      'No se ha podido crear la cuenta. Puede que ya tengas una con ese email, o que la invitación haya caducado o ya se haya usado.',
+    errors: {
+      400: 'La invitación ha caducado o ya se ha usado. Pide un enlace nuevo.',
+      409: 'Ya existe una cuenta con ese email. Pulsa «Entrar» abajo.',
+    } as Record<number, string>,
     switchPrompt: '¿Ya tienes cuenta?',
     switchTo: 'Entrar',
   },
+}
+
+const tooManyAttempts = 'Demasiados intentos fallidos. Espera 15 minutos y vuelve a probar.'
+const genericError = 'No se ha podido completar. Inténtalo de nuevo.'
+
+/** The message for a failed login or sign-up, from the HTTP status the API answered. */
+function errorMessage(error: Error, errors: Record<number, string>) {
+  const status = error instanceof ApiError ? error.status : 0
+  if (status === 429) return tooManyAttempts
+  return errors[status] ?? genericError
 }
 
 /**
@@ -102,7 +114,9 @@ export function AuthScreen() {
           )}
         </label>
 
-        {mutation.isError && <p className="text-sm text-red-600">{text.error}</p>}
+        {mutation.error && (
+          <p className="text-sm text-red-600">{errorMessage(mutation.error, text.errors)}</p>
+        )}
 
         <button type="submit" disabled={mutation.isPending} className={primaryButtonClass}>
           {mutation.isPending ? text.pending : text.submit}
