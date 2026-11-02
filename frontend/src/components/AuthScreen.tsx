@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useLogIn, useSignUp } from '../api/queries'
+import { readInvitation } from '../lib/invitation'
 import { inputClass, primaryButtonClass } from './styles'
 
 const copy = {
@@ -23,17 +24,12 @@ const copy = {
   },
 }
 
-/** The token of an invitation link (`/#invitation=…`), if the page was opened from one. */
-function readInvitation() {
-  return new URLSearchParams(window.location.hash.slice(1)).get('invitation')
-}
-
 /**
  * Login and sign-up share the same two fields, so one form switches between both.
  * Sign-up is only offered when the page was opened from an invitation link.
  */
 export function AuthScreen() {
-  const [invitation] = useState(readInvitation)
+  const [invitation] = useState(() => readInvitation())
   const [mode, setMode] = useState<'login' | 'signup'>(invitation ? 'signup' : 'login')
   const logIn = useLogIn()
   const signUp = useSignUp()

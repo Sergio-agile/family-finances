@@ -350,7 +350,8 @@ Como `seed.py`, `app/invitations.py` se puede ejecutar como script. `argparse` e
 ### Frontend: compartir desde el móvil
 - `navigator.share()` abre el menú nativo de compartir del móvil (WhatsApp, Telegram…). Si no existe (por ejemplo, en un ordenador), se usa `navigator.clipboard.writeText()` para copiar.
 - Las dos APIs solo funcionan en HTTPS o en `localhost`. Desde el móvil por la IP de casa no aparecen, y por eso el enlace también se muestra en un campo de texto para copiarlo a mano.
-- `useState(readInvitation)` lee el token de la URL una sola vez, al montar la pantalla. Al registrarse, `history.replaceState` lo quita de la URL sin recargar la página.
+- `useState(() => readInvitation())` lee el token de la URL una sola vez, al montar la pantalla. Al registrarse, `history.replaceState` lo quita de la URL sin recargar la página.
+- Si abres un enlace de invitación con la sesión ya iniciada, la app no lo ignora en silencio: muestra un aviso para salir primero. Ojo al probar: en Chrome, todas las ventanas de incógnito abiertas a la vez comparten cookies, así que una segunda ventana de incógnito ya tiene la sesión de la primera.
 
 ## Preguntas para revisar el PR 10
 1. ¿Qué pasaría si `accept_invitation` hiciese un `SELECT` y luego un `session.delete()` por separado, y dos personas usasen el mismo enlace a la vez?

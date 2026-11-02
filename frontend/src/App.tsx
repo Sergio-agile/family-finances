@@ -6,6 +6,7 @@ import { ExpenseForm } from './components/ExpenseForm'
 import { ExpenseList } from './components/ExpenseList'
 import { InviteSection } from './components/InviteSection'
 import { currentMonth } from './lib/dates'
+import { readInvitation } from './lib/invitation'
 
 export default function App() {
   const currentUser = useCurrentUser()
@@ -25,6 +26,8 @@ export default function App() {
 
 function Home({ user }: { user: UserRead }) {
   const [month, setMonth] = useState(currentMonth)
+  // An invitation link opened while logged in can't be used: say so instead of ignoring it.
+  const [hasInvitation] = useState(() => readInvitation() !== null)
   const logOut = useLogOut()
 
   return (
@@ -44,6 +47,14 @@ function Home({ user }: { user: UserRead }) {
           />
         </label>
       </header>
+
+      {hasInvitation && (
+        <p className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
+          Has abierto un enlace de invitación, pero ya has entrado como{' '}
+          <strong className="break-all">{user.email}</strong>. Para crear otra cuenta con él, pulsa
+          «Salir» abajo del todo.
+        </p>
+      )}
 
       <ExpenseForm />
       <ExpenseList month={month} />
