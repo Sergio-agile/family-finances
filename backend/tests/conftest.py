@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.auth import password_hash
 from app.config import settings
 from app.db import get_session
+from app.invitations import create_invitation
 from app.main import app
 from app.models import Category, Household, SpendingType, User
 
@@ -91,6 +92,13 @@ def user(session, household) -> User:
     session.add(user)
     session.flush()
     return user
+
+
+@pytest.fixture
+def invitation_token(session, household) -> str:
+    """A valid invitation to join `household`."""
+    _, token = create_invitation(session, household.id)
+    return token
 
 
 @pytest.fixture

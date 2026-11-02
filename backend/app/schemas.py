@@ -73,6 +73,8 @@ class SignUp(BaseModel):
     email: Email
     # Length is what makes a password strong; no composition rules (NIST SP 800-63B).
     password: str = Field(min_length=12, max_length=128)
+    # Sign-up is by invitation only: the new account joins the household that invited it.
+    invitation_token: str = Field(max_length=100)
 
 
 class LogIn(BaseModel):
@@ -94,3 +96,8 @@ class UserRead(BaseModel):
     id: int
     email: str
     households: list[HouseholdRead]
+
+
+class InvitationRead(BaseModel):
+    url: str
+    expires_at: datetime

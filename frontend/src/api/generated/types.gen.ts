@@ -141,6 +141,20 @@ export type HouseholdRead = {
 };
 
 /**
+ * InvitationRead
+ */
+export type InvitationRead = {
+    /**
+     * Url
+     */
+    url: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
+};
+
+/**
  * LogIn
  */
 export type LogIn = {
@@ -166,6 +180,10 @@ export type SignUp = {
      * Password
      */
     password: string;
+    /**
+     * Invitation Token
+     */
+    invitation_token: string;
 };
 
 /**
@@ -428,6 +446,36 @@ export type UpdateExpenseResponses = {
 };
 
 export type UpdateExpenseResponse = UpdateExpenseResponses[keyof UpdateExpenseResponses];
+
+export type InviteToHouseholdData = {
+    body?: never;
+    path: {
+        /**
+         * Household Id
+         */
+        household_id: number;
+    };
+    query?: never;
+    url: '/api/households/{household_id}/invitations';
+};
+
+export type InviteToHouseholdErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type InviteToHouseholdError = InviteToHouseholdErrors[keyof InviteToHouseholdErrors];
+
+export type InviteToHouseholdResponses = {
+    /**
+     * Successful Response
+     */
+    201: InvitationRead;
+};
+
+export type InviteToHouseholdResponse = InviteToHouseholdResponses[keyof InviteToHouseholdResponses];
 
 export type ListSpendingTypesData = {
     body?: never;

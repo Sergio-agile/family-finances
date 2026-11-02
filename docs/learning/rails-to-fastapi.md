@@ -324,3 +324,37 @@ La fixture `production_settings` (con `autouse=True`, se aplica a todos los test
 2. ¿Por qué el índice es `(household_id, spent_on)` y no `(spent_on, household_id)`?
 3. Si un usuario pertenece a dos hogares, ¿qué cambiaría en el backend para mostrar los dos? ¿Y en el frontend?
 4. Las categorías siguen siendo globales. Si una familia quiere crear la categoría "Mascotas", ¿qué opciones hay y qué implicaría cada una?
+
+## Conceptos del PR 10: invitaciones
+
+| Rails | Python / FastAPI | En este repo |
+|---|---|---|
+| `has_secure_token :token` | `new_token()`: token aleatorio + su hash | `app/auth.py` |
+| `Invitation.find_by(token:)&.destroy` | `delete(...).returning(...)`: buscar y borrar en una sola consulta | `accept_invitation` |
+| tarea `rake households:create` | módulo con `if __name__ == "__main__"` + `argparse` | `uv run python -m app.invitations "Casa"` |
+| `request.base_url` | `request.base_url` (igual) | `invite_to_household` |
+| `params.require(:invitation_token)` | campo obligatorio en el esquema `SignUp` | 422 si falta |
+
+### Un solo uso, garantizado por Postgres
+Con "busco la invitación, compruebo que vale y luego la borro", dos registros simultáneos podrían leerla los dos antes de que ninguno la borre. `DELETE … WHERE token_hash = … AND expires_at > now() RETURNING household_id` lo hace todo en una sola sentencia: solo una de las dos peticiones consigue borrar la fila y recibe el `household_id`. La otra recibe `None` y un 400.
+
+### Si algo falla después, la invitación sigue viva
+El registro comprueba primero el email (409 si ya existe) y luego consume la invitación. Si fallase algo más tarde, no se llega al `commit`: al cerrar la sesión de SQLAlchemy se hace rollback y la fila de la invitación vuelve a estar ahí. El test `test_a_taken_email_does_not_use_up_the_invitation` lo comprueba.
+
+### El token detrás del `#`
+La parte de la URL después de `#` (el *fragment*) nunca sale del navegador: no llega al servidor ni a sus logs, ni se manda en la cabecera `Referer` a otras webs. El frontend la lee con `window.location.hash` y la envía en el cuerpo del POST de registro.
+
+### Un comando para crear el primer hogar
+Como `seed.py`, `app/invitations.py` se puede ejecutar como script. `argparse` es la librería estándar para argumentos de línea de comandos (como `OptionParser` en Ruby), y además genera el `--help`.
+
+### Frontend: compartir desde el móvil
+- `navigator.share()` abre el menú nativo de compartir del móvil (WhatsApp, Telegram…). Si no existe (por ejemplo, en un ordenador), se usa `navigator.clipboard.writeText()` para copiar.
+- Las dos APIs solo funcionan en HTTPS o en `localhost`. Desde el móvil por la IP de casa no aparecen, y por eso el enlace también se muestra en un campo de texto para copiarlo a mano.
+- `useState(() => readInvitation())` lee el token de la URL una sola vez, al montar la pantalla. Al registrarse, `history.replaceState` lo quita de la URL sin recargar la página.
+- Si abres un enlace de invitación con la sesión ya iniciada, la app no lo ignora en silencio: muestra un aviso para salir primero. Ojo al probar: en Chrome, todas las ventanas de incógnito abiertas a la vez comparten cookies, así que una segunda ventana de incógnito ya tiene la sesión de la primera.
+
+## Preguntas para revisar el PR 10
+1. ¿Qué pasaría si `accept_invitation` hiciese un `SELECT` y luego un `session.delete()` por separado, y dos personas usasen el mismo enlace a la vez?
+2. ¿Por qué el registro comprueba el email antes de consumir la invitación? ¿Qué pasaría si lo hiciera al revés?
+3. Si mañana abrimos el registro a otras familias, ¿qué cambiaría en `sign_up` y en `SignUp`?
+4. Cualquier miembro puede invitar. ¿Cuándo empezaría a importar tener roles (owner/member)?

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useLogIn, useSignUp } from '../api/queries'
+import { readInvitation } from '../lib/invitation'
 import { inputClass, primaryButtonClass } from './styles'
 
 const copy = {
@@ -9,22 +10,27 @@ const copy = {
     submit: 'Entrar',
     pending: 'Entrando…',
     error: 'Email o contraseña incorrectos.',
-    switchPrompt: '¿No tienes cuenta?',
-    switchTo: 'Crear una',
+    switchPrompt: '¿Vienes por la invitación?',
+    switchTo: 'Crear cuenta',
   },
   signup: {
     title: 'Crear cuenta',
     submit: 'Crear cuenta',
     pending: 'Creando…',
-    error: 'No se ha podido crear la cuenta. ¿Ya tienes una con ese email?',
+    error:
+      'No se ha podido crear la cuenta. Puede que ya tengas una con ese email, o que la invitación haya caducado o ya se haya usado.',
     switchPrompt: '¿Ya tienes cuenta?',
     switchTo: 'Entrar',
   },
 }
 
-/** Login and sign-up share the same two fields, so one form switches between both. */
+/**
+ * Login and sign-up share the same two fields, so one form switches between both.
+ * Sign-up is only offered when the page was opened from an invitation link.
+ */
 export function AuthScreen() {
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const [invitation] = useState(() => readInvitation())
+  const [mode, setMode] = useState<'login' | 'signup'>(invitation ? 'signup' : 'login')
   const logIn = useLogIn()
   const signUp = useSignUp()
   const mutation = mode === 'login' ? logIn : signUp
@@ -33,7 +39,17 @@ export function AuthScreen() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
-    mutation.mutate({ email: String(data.get('email')), password: String(data.get('password')) })
+    const credentials = { email: String(data.get('email')), password: String(data.get('password')) }
+
+    if (mode === 'login') {
+      logIn.mutate(credentials)
+    } else {
+      signUp.mutate(
+        { ...credentials, invitation_token: invitation! },
+        // The invitation is used up: drop it from the URL so a later logout shows plain login.
+        { onSuccess: () => history.replaceState(null, '', window.location.pathname) },
+      )
+    }
   }
 
   function switchMode() {
@@ -78,10 +94,16 @@ export function AuthScreen() {
       </form>
 
       <p className="text-center text-sm text-gray-600">
-        {text.switchPrompt}{' '}
-        <button type="button" onClick={switchMode} className="font-semibold text-emerald-700">
-          {text.switchTo}
-        </button>
+        {invitation ? (
+          <>
+            {text.switchPrompt}{' '}
+            <button type="button" onClick={switchMode} className="font-semibold text-emerald-700">
+              {text.switchTo}
+            </button>
+          </>
+        ) : (
+          '¿No tienes cuenta? Pide un enlace de invitación a alguien de tu hogar.'
+        )}
       </p>
     </main>
   )
