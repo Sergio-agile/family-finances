@@ -107,6 +107,20 @@ def user(session, household) -> User:
 
 
 @pytest.fixture
+def luis(session, household) -> User:
+    """A second member of `household`."""
+    user = User(
+        name="Luis",
+        email="luis@example.com",
+        password_hash=password_hash.hash(PASSWORD),
+        households=[household],
+    )
+    session.add(user)
+    session.flush()
+    return user
+
+
+@pytest.fixture
 def invitation_token(session, household) -> str:
     """A valid invitation to join `household`."""
     _, token = create_invitation(session, household.id)
