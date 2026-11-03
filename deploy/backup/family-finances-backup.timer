@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily family-finances database backup
+
+[Timer]
+# 03:15, not 03:00: easy-admin backs up at 03:00 on the same 1 GB server.
+OnCalendar=*-*-* 03:15:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

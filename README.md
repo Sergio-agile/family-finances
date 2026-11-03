@@ -62,6 +62,8 @@ docker compose -f docker-compose.prod.yml --env-file .env.production exec web py
 docker compose -f docker-compose.prod.yml --env-file .env.production exec web python -m app.invitations "Casa García"
 ```
 
+Daily database backups, kept on the server and pulled to a Mac: see [`deploy/backup/`](deploy/backup/README.md) (ADR 0011).
+
 ## Roadmap
 
 1. Expenses: add and list expenses, categories

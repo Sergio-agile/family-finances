@@ -1,0 +1,8 @@
+[Unit]
+Description=family-finances production database backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/family-finances/deploy/backup/backup.sh
