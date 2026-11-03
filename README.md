@@ -46,6 +46,22 @@ Backend tests: `cd backend && uv run pytest` (needs the database running; the su
 
 New migration after changing `app/models.py`: `uv run alembic revision --autogenerate -m "describe the change"`, then review the generated file before committing.
 
+## Production
+
+The production image bundles the API and the built frontend (ADR 0010). It runs on a server whose shared [Caddy](https://caddyserver.com) reverse proxy ([Sergio-agile/infra](https://github.com/Sergio-agile/infra), `proxy/`) handles HTTPS and imports this app's site block from `deploy/caddy/`. Start the proxy first: the app joins its external `proxy` network.
+
+```sh
+cp .env.production.example .env.production   # POSTGRES_PASSWORD, FAMILY_FINANCES_DOMAIN; chmod 600
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+```
+
+Migrations run when the container starts. The first time, seed the categories and create the household:
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file .env.production exec web python -m app.seed
+docker compose -f docker-compose.prod.yml --env-file .env.production exec web python -m app.invitations "Casa García"
+```
+
 ## Roadmap
 
 1. Expenses: add and list expenses, categories

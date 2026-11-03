@@ -1,0 +1,48 @@
+# Production stack (ADR 0010):
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+# HTTPS comes from the server's shared Caddy (Sergio-agile/infra, proxy/), which reaches web as
+# "family-finances" on the external "proxy" network; start that stack first. The site block lives
+# in deploy/caddy/. No port is published: nothing but Caddy can reach the app.
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: family
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?missing}
+      POSTGRES_DB: family_finances
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U family -d family_finances"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # The server has 1 GB shared by every app; Postgres' defaults fit well inside this.
+    mem_limit: 256m
+
+  web:
+    build: .
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+psycopg://family:${POSTGRES_PASSWORD}@db:5432/family_finances
+      APP_URL: https://${FAMILY_FINANCES_DOMAIN:?missing}
+      ALLOWED_HOSTS: '["${FAMILY_FINANCES_DOMAIN}"]'
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      default:
+      proxy:
+        aliases:
+          - family-finances
+    # One worker plus Argon2 hashing (64 MiB per login) fits with room to spare.
+    mem_limit: 256m
+
+volumes:
+  pgdata:
+
+networks:
+  proxy:
+    external: true

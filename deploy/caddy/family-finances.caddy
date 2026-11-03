@@ -1,0 +1,10 @@
+# Site block for the server's shared Caddy (Sergio-agile/infra, proxy/), which imports it from
+# this directory. Caddy gets and renews the Let's Encrypt certificate for FAMILY_FINANCES_DOMAIN
+# and redirects HTTP to HTTPS. It keeps the client's Host header (the API's Origin check needs it)
+# and sets X-Forwarded-For itself, discarding any value the client sent.
+# The app sets its own security headers (ADR 0009); "family-finances" is its alias on the
+# shared "proxy" network.
+{$FAMILY_FINANCES_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy family-finances:8000
+}

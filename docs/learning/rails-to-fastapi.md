@@ -537,3 +537,31 @@ Un `mount` en `/` captura todo lo que llega a él. Starlette prueba las rutas en
 1. ¿Qué pasaría si `serve_frontend` se llamase antes de declarar `/api/health`?
 2. ¿Por qué `index.html` no puede tener la caché de un año que tienen los assets?
 3. Si un día añadimos un `<script>` inline en `index.html`, ¿qué verías en el navegador y dónde mirarías?
+
+## Conceptos del PR 24: desplegar con Docker Compose
+
+| Rails | Python / FastAPI | En este repo |
+|---|---|---|
+| `Dockerfile` que genera Rails 7.1+ (multi-stage, `assets:precompile`) | `Dockerfile` en tres etapas: Node, uv, runtime | `Dockerfile` |
+| `bundle install --without development test` | `uv sync --locked --no-dev` | etapa `backend` |
+| `bin/docker-entrypoint` con `db:prepare` | `alembic upgrade head && exec fastapi run` | `CMD` del `Dockerfile` |
+| Puma detrás de Thruster/nginx (`config.action_dispatch.trusted_proxies`) | `fastapi run --proxy-headers --forwarded-allow-ips` | `CMD` del `Dockerfile` |
+| Kamal (`kamal deploy`) | `git pull` + `docker compose … up -d --build` | `docker-compose.prod.yml` |
+
+### Imagen en varias etapas
+Cada `FROM` empieza una etapa nueva, y solo lo que se copia con `COPY --from=…` pasa a la siguiente. Node y uv se usan para construir pero no llegan a la imagen final: esta solo tiene Python, el virtualenv, el código y el `dist` del frontend (287 MB). Es lo mismo que hace el `Dockerfile` de Rails con `assets:precompile`.
+
+### `exec` en el `CMD`
+`sh -c "alembic upgrade head && exec fastapi run …"`: con `exec`, el servidor sustituye al `sh` y pasa a ser el proceso 1 del contenedor. Así recibe directamente la señal de parada de Docker y se cierra limpio, sin esperar los 10 segundos tras los que Docker lo mataría.
+
+### La IP real del cliente
+Entre el navegador y la app está Caddy, así que la conexión siempre llega desde la IP de Caddy. Caddy apunta la IP original en la cabecera `X-Forwarded-For`, y `--proxy-headers` hace que uvicorn la use como `request.client.host`. Sin eso, el límite de intentos por IP del PR 13 vería a toda la familia como una sola IP. Confiar en cualquier remitente (`'*'`) solo es seguro porque el contenedor no publica puertos: nadie más que Caddy puede hablarle.
+
+### Redes de Docker y alias
+Cada compose crea su red `default`, donde los servicios se encuentran por nombre (`db`, `web`). La red `proxy` es externa y compartida con Caddy; dentro de ella dos apps tienen un servicio `web`, así que cada una entra con un alias propio (`family-finances`). La base de datos solo está en la red `default`: Caddy no puede verla.
+
+## Preguntas para revisar el PR 24
+1. Si una migración falla al arrancar, ¿qué pasa con la versión anterior de la app? ¿Y con los datos?
+2. ¿Qué pasaría con el límite de intentos si quitásemos `--proxy-headers`?
+3. ¿Por qué `ENVIRONMENT=production` está escrito en el compose en vez de leerse del `.env.production`?
+4. ¿Qué tendría que cambiar si un día publicásemos el puerto 8000 del contenedor?
