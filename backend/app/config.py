@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     # Host headers the API answers to, as JSON: ALLOWED_HOSTS='["finanzas.example.com"]'.
     # Any host in development, so the phone can use the computer's LAN address.
     allowed_hosts: list[str] = ["*"]
+    # The built frontend (`npm run build` → frontend/dist), served by the API in production so a
+    # single container ships both. Unset in development, where Vite serves it.
+    frontend_dist: Path | None = None
 
     @property
     def is_production(self) -> bool:
