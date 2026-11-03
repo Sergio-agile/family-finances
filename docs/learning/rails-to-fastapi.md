@@ -565,3 +565,25 @@ Cada compose crea su red `default`, donde los servicios se encuentran por nombre
 2. ¿Qué pasaría con el límite de intentos si quitásemos `--proxy-headers`?
 3. ¿Por qué `ENVIRONMENT=production` está escrito en el compose en vez de leerse del `.env.production`?
 4. ¿Qué tendría que cambiar si un día publicásemos el puerto 8000 del contenedor?
+
+## Conceptos del PR 25: backups
+
+| Rails | Aquí | En este repo |
+|---|---|---|
+| `whenever` / cron en el servidor | timer de systemd (`OnCalendar`, `Persistent=true`) | `family-finances-backup.timer` |
+| `pg_dump` en una tarea `rake db:backup` | `pg_dump` dentro del contenedor `db` con `docker compose exec -T` | `backup.sh` |
+| cron en el Mac | agente de `launchd` (`StartCalendarInterval`) | `com.family-finances.backup-pull.plist` |
+
+### Timer de systemd frente a cron
+Un timer es un "cron" gestionado por systemd. Con `Persistent=true`, si el servidor estaba apagado a las 03:15, el backup se hace al arrancar. Los logs quedan en `journalctl -u family-finances-backup`, y `systemctl list-timers` muestra cuándo fue la última y cuándo será la próxima.
+
+### Un backup que nadie ha restaurado no es un backup
+El riesgo no es solo perder datos, sino descubrir el día que los necesitas que la copia está vacía o no se puede cargar. Por eso: el dump se escribe en `.tmp` y solo se renombra si termina bien; el Mac avisa si la última copia tiene más de 48 horas; y la primera restauración se ensaya en una base de datos aparte.
+
+### `-T` en `docker compose exec`
+Sin `-T`, Docker reserva una terminal (TTY) para el comando. Con una TTY, la salida de `pg_dump` se mezclaría con códigos de terminal y el gzip quedaría corrupto. Con `-T`, la salida es un flujo limpio que se puede encadenar con `|`.
+
+## Preguntas para revisar el PR 25
+1. Si `pg_dump` falla a mitad, ¿qué archivo queda en `/var/backups/family-finances`? ¿Y si no usásemos el `.tmp`?
+2. El Mac estuvo apagado una semana de vacaciones. ¿Qué copias tendrás al volver? ¿Y en el servidor?
+3. ¿Qué datos perderías si el servidor muere a las 03:10? ¿Y a las 03:20?
