@@ -513,3 +513,27 @@ La cabecera `Host` la escribe el cliente, así que se puede falsear. Nosotros la
 2. Si `add_security_headers` se declarase antes que `check_origin`, ¿qué respuesta se quedaría sin cabeceras?
 3. HSTS dura dos años. ¿Qué pasaría si lo activásemos en un dominio que todavía no tiene HTTPS funcionando?
 4. ¿Por qué el error de configuración no debe mostrar los valores (`hide_input_in_errors`)?
+
+## Conceptos del PR 23: la API sirve el frontend compilado
+
+| Rails | Python / FastAPI | En este repo |
+|---|---|---|
+| `public/` servido por `ActionDispatch::Static` (`RAILS_SERVE_STATIC_FILES`) | `app.mount("/", StaticFiles(directory=…, html=True))` | `serve_frontend` en `app/main.py` |
+| `config.public_file_server.headers` (caché de los assets) | `ASSET_HEADERS` en el middleware de cabeceras | `app/main.py` |
+| `assets:precompile` con *digest* (`application-3f2a….js`) | `npm run build` de Vite (`index-EMhiBOwf.js`) | `frontend/dist/` |
+
+### Un solo contenedor para API y frontend
+En producción no hay Vite: `npm run build` genera HTML, JS y CSS estáticos en `frontend/dist`. Con `FRONTEND_DIST` apuntando ahí, FastAPI los sirve en `/`, igual que Rails sirve `public/`. Así API y frontend viajan en la misma imagen y se despliegan juntos, sin que una versión del frontend hable con otra de la API.
+
+### `mount` va el último
+Un `mount` en `/` captura todo lo que llega a él. Starlette prueba las rutas en orden, así que las de la API (todas bajo `/api/`) se declaran antes y ganan. Una ruta `/api/` que no existe sigue devolviendo el 404 en JSON de la API, no la página.
+
+### Dos políticas de cabeceras
+- **API**: `default-src 'none'` y `no-store`, como en el PR 22.
+- **Página**: `default-src 'self'`, es decir, solo scripts, estilos y llamadas de nuestro propio dominio, sin código inline ni `eval`. Si alguien consiguiera inyectar un `<script>` en la página, el navegador se negaría a ejecutarlo. `index.html` lleva `no-cache` (se revalida en cada visita para ver siempre el último build).
+- **Assets con hash**: caché de un año con `immutable`. Si el contenido cambia, cambia el nombre del archivo, así que nunca se sirve una versión vieja.
+
+## Preguntas para revisar el PR 23
+1. ¿Qué pasaría si `serve_frontend` se llamase antes de declarar `/api/health`?
+2. ¿Por qué `index.html` no puede tener la caché de un año que tienen los assets?
+3. Si un día añadimos un `<script>` inline en `index.html`, ¿qué verías en el navegador y dónde mirarías?

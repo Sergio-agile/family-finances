@@ -1,9 +1,11 @@
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, Request, status
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import text
 
@@ -59,17 +61,36 @@ async def check_origin(request: Request, call_next):
 # The Origin check and invitation links trust the Host header: only accept our own domains.
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
 
-SECURITY_HEADERS = {
+COMMON_HEADERS = {"X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer"}
+if settings.is_production:
+    # Browsers will only use HTTPS for this domain for the next two years.
+    COMMON_HEADERS["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+
+API_HEADERS = COMMON_HEADERS | {
     # Financial data: no browser or proxy keeps a copy (TanStack Query caches in memory).
     "Cache-Control": "no-store",
     # The API only returns JSON: it may load nothing and be framed by no page.
     "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
-    "X-Content-Type-Options": "nosniff",
-    "Referrer-Policy": "no-referrer",
 }
-if settings.is_production:
-    # Browsers will only use HTTPS for this domain for the next two years.
-    SECURITY_HEADERS["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+FRONTEND_HEADERS = COMMON_HEADERS | {
+    # index.html holds no data, only links to the current build: revalidate it on every visit.
+    "Cache-Control": "no-cache",
+    # The page loads scripts, styles and API calls from its own origin only; no inline code.
+    "Content-Security-Policy": (
+        "default-src 'self'; base-uri 'none'; form-action 'self'; "
+        "frame-ancestors 'none'; object-src 'none'"
+    ),
+}
+# Vite puts a content hash in every asset's name, so a file never changes: cache it for a year.
+ASSET_HEADERS = FRONTEND_HEADERS | {"Cache-Control": "public, max-age=31536000, immutable"}
+
+
+def security_headers(path: str) -> dict[str, str]:
+    if path.startswith("/api/"):
+        return API_HEADERS
+    if path.startswith("/assets/"):
+        return ASSET_HEADERS
+    return FRONTEND_HEADERS
 
 
 @app.middleware("http")
@@ -77,7 +98,7 @@ async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     # Swagger, only in development, needs scripts and styles from its CDN.
     if not request.url.path.startswith(("/docs", "/redoc")):
-        response.headers.update(SECURITY_HEADERS)
+        response.headers.update(security_headers(request.url.path))
     return response
 
 
@@ -90,3 +111,14 @@ class Health(BaseModel):
 def health(session: SessionDep) -> Health:
     session.execute(text("SELECT 1"))
     return Health(status="ok", database="ok")
+
+
+def serve_frontend(app: FastAPI, dist: Path) -> None:
+    """Serve the built frontend at `/` (index.html, favicon, hashed assets). Mounted after every
+    API route, which match first; an unknown /api/ path still gets the API's JSON 404."""
+    app.mount("/", StaticFiles(directory=dist, html=True), name="frontend")
+
+
+# Keep this last: nothing declared after the mount at `/` would ever be reached.
+if settings.frontend_dist:
+    serve_frontend(app, settings.frontend_dist)
