@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateExpenseData, CreateExpenseErrors, CreateExpenseResponses, GetCurrentUserData, GetCurrentUserResponses, HealthData, HealthResponses, InviteToHouseholdData, InviteToHouseholdErrors, InviteToHouseholdResponses, ListCategoriesData, ListCategoriesResponses, ListExpensesData, ListExpensesErrors, ListExpensesResponses, ListMembersData, ListMembersErrors, ListMembersResponses, ListSpendingTypesData, ListSpendingTypesResponses, LogInData, LogInErrors, LogInResponses, LogOutData, LogOutResponses, SignUpData, SignUpErrors, SignUpResponses, UpdateExpenseData, UpdateExpenseErrors, UpdateExpenseResponses } from './types.gen';
+import type { CreateApiTokenData, CreateApiTokenErrors, CreateApiTokenResponses, CreateExpenseData, CreateExpenseErrors, CreateExpenseResponses, GetCurrentUserData, GetCurrentUserResponses, HealthData, HealthResponses, InviteToHouseholdData, InviteToHouseholdErrors, InviteToHouseholdResponses, ListApiTokensData, ListApiTokensResponses, ListCategoriesData, ListCategoriesResponses, ListExpensesData, ListExpensesErrors, ListExpensesResponses, ListMembersData, ListMembersErrors, ListMembersResponses, ListSpendingTypesData, ListSpendingTypesResponses, LogInData, LogInErrors, LogInResponses, LogOutData, LogOutResponses, RevokeApiTokenData, RevokeApiTokenErrors, RevokeApiTokenResponses, SignUpData, SignUpErrors, SignUpResponses, UpdateExpenseData, UpdateExpenseErrors, UpdateExpenseResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -65,7 +65,7 @@ export const getCurrentUser = <ThrowOnError extends boolean = false>(options?: O
             in: 'cookie',
             name: 'session',
             type: 'apiKey'
-        }],
+        }, { scheme: 'bearer', type: 'http' }],
     url: '/api/auth/me',
     ...options
 });
@@ -78,7 +78,7 @@ export const listCategories = <ThrowOnError extends boolean = false>(options?: O
             in: 'cookie',
             name: 'session',
             type: 'apiKey'
-        }],
+        }, { scheme: 'bearer', type: 'http' }],
     url: '/api/categories',
     ...options
 });
@@ -93,7 +93,7 @@ export const listExpenses = <ThrowOnError extends boolean = false>(options: Opti
             in: 'cookie',
             name: 'session',
             type: 'apiKey'
-        }],
+        }, { scheme: 'bearer', type: 'http' }],
     url: '/api/households/{household_id}/expenses',
     ...options
 });
@@ -106,7 +106,7 @@ export const createExpense = <ThrowOnError extends boolean = false>(options: Opt
             in: 'cookie',
             name: 'session',
             type: 'apiKey'
-        }],
+        }, { scheme: 'bearer', type: 'http' }],
     url: '/api/households/{household_id}/expenses',
     ...options,
     headers: {
@@ -123,7 +123,7 @@ export const updateExpense = <ThrowOnError extends boolean = false>(options: Opt
             in: 'cookie',
             name: 'session',
             type: 'apiKey'
-        }],
+        }, { scheme: 'bearer', type: 'http' }],
     url: '/api/households/{household_id}/expenses/{expense_id}',
     ...options,
     headers: {
@@ -142,23 +142,8 @@ export const listMembers = <ThrowOnError extends boolean = false>(options: Optio
             in: 'cookie',
             name: 'session',
             type: 'apiKey'
-        }],
+        }, { scheme: 'bearer', type: 'http' }],
     url: '/api/households/{household_id}/members',
-    ...options
-});
-
-/**
- * Invite To Household
- *
- * A one-time sign-up link that joins this household. Any member can create one.
- */
-export const inviteToHousehold = <ThrowOnError extends boolean = false>(options: Options<InviteToHouseholdData, ThrowOnError>): RequestResult<InviteToHouseholdResponses, InviteToHouseholdErrors, ThrowOnError> => (options.client ?? client).post<InviteToHouseholdResponses, InviteToHouseholdErrors, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'session',
-            type: 'apiKey'
-        }],
-    url: '/api/households/{household_id}/invitations',
     ...options
 });
 
@@ -172,8 +157,73 @@ export const listSpendingTypes = <ThrowOnError extends boolean = false>(options?
             in: 'cookie',
             name: 'session',
             type: 'apiKey'
-        }],
+        }, { scheme: 'bearer', type: 'http' }],
     url: '/api/spending-types',
+    ...options
+});
+
+/**
+ * List Api Tokens
+ *
+ * Your API tokens, newest first. The tokens themselves are never shown again.
+ */
+export const listApiTokens = <ThrowOnError extends boolean = false>(options?: Options<ListApiTokensData, ThrowOnError>): RequestResult<ListApiTokensResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListApiTokensResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }, { scheme: 'bearer', type: 'http' }],
+    url: '/api/tokens',
+    ...options
+});
+
+/**
+ * Create Api Token
+ *
+ * A new token acting as you, limited to its scopes. The response is the only time the token
+ * is shown: only its hash is stored.
+ */
+export const createApiToken = <ThrowOnError extends boolean = false>(options: Options<CreateApiTokenData, ThrowOnError>): RequestResult<CreateApiTokenResponses, CreateApiTokenErrors, ThrowOnError> => (options.client ?? client).post<CreateApiTokenResponses, CreateApiTokenErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }, { scheme: 'bearer', type: 'http' }],
+    url: '/api/tokens',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Revoke Api Token
+ *
+ * Revoke one of your tokens: it stops working at once.
+ */
+export const revokeApiToken = <ThrowOnError extends boolean = false>(options: Options<RevokeApiTokenData, ThrowOnError>): RequestResult<RevokeApiTokenResponses, RevokeApiTokenErrors, ThrowOnError> => (options.client ?? client).delete<RevokeApiTokenResponses, RevokeApiTokenErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }, { scheme: 'bearer', type: 'http' }],
+    url: '/api/tokens/{token_id}',
+    ...options
+});
+
+/**
+ * Invite To Household
+ *
+ * A one-time sign-up link that joins this household. Any member can create one.
+ */
+export const inviteToHousehold = <ThrowOnError extends boolean = false>(options: Options<InviteToHouseholdData, ThrowOnError>): RequestResult<InviteToHouseholdResponses, InviteToHouseholdErrors, ThrowOnError> => (options.client ?? client).post<InviteToHouseholdResponses, InviteToHouseholdErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }, { scheme: 'bearer', type: 'http' }],
+    url: '/api/households/{household_id}/invitations',
     ...options
 });
 

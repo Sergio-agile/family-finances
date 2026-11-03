@@ -8,12 +8,12 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
-from app.auth import password_hash
+from app.auth import new_api_token, password_hash
 from app.config import settings
 from app.db import get_session
 from app.invitations import create_invitation
 from app.main import app
-from app.models import Category, Household, SpendingType, User
+from app.models import ApiToken, Category, Household, SpendingType, User
 
 # Like Rails: a separate test database, next to the development one.
 TEST_DATABASE_URL = make_url(settings.database_url).set(database="family_finances_test")
@@ -163,3 +163,18 @@ def ant_spending(session) -> SpendingType:
     session.add(spending_type)
     session.flush()
     return spending_type
+
+
+@pytest.fixture
+def make_api_token(session, user):
+    """Create an API token for `user` with the given scopes; returns the token to send."""
+
+    def make(*scopes: str) -> str:
+        token, token_hash = new_api_token()
+        session.add(
+            ApiToken(user_id=user.id, name="n8n", scopes=list(scopes), token_hash=token_hash)
+        )
+        session.flush()
+        return token
+
+    return make

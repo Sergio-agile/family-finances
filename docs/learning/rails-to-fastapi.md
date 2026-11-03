@@ -587,3 +587,32 @@ Sin `-T`, Docker reserva una terminal (TTY) para el comando. Con una TTY, la sal
 1. Si `pg_dump` falla a mitad, ¿qué archivo queda en `/var/backups/family-finances`? ¿Y si no usásemos el `.tmp`?
 2. El Mac estuvo apagado una semana de vacaciones. ¿Qué copias tendrás al volver? ¿Y en el servidor?
 3. ¿Qué datos perderías si el servidor muere a las 03:10? ¿Y a las 03:20?
+
+## Conceptos del PR 26: tokens de API con scopes
+
+| Rails | Python / FastAPI | En este repo |
+|---|---|---|
+| `has_secure_token` | `secrets.token_urlsafe(32)` con prefijo `ff_`, guardado como SHA-256 | `new_api_token` en `app/auth.py` |
+| `authenticate_or_request_with_http_token` | `HTTPBearer(auto_error=False)` | `bearer` en `app/auth.py` |
+| scopes de Doorkeeper (`doorkeeper_authorize! :write`) | `Security(current_user, scopes=["expenses:write"])` + `SecurityScopes` | `ExpensesWriter`, `WritableHousehold` |
+| `before_action` en un controlador | `dependencies=[Security(…)]` al incluir el router | `app/main.py` |
+| `ActiveRecord` con columna `array: true` | `ARRAY(String)` de SQLAlchemy (Postgres) | `ApiToken.scopes` |
+
+### `Depends` frente a `Security`
+`Security` es un `Depends` que además declara scopes. FastAPI los va acumulando por la cadena de dependencias: si un endpoint pide `WritableHousehold`, la dependencia `current_household` hereda el scope `expenses:write` y se lo pasa a `current_user`, que lo recibe en `security_scopes`. Así el endpoint solo dice qué necesita, y la comprobación vive en un único sitio.
+
+### Denegar por defecto
+`current_user` deja pasar a un token solo si el endpoint ha pedido algún scope. Si no ha pedido ninguno, responde 403. Es la misma idea que el `verify_authorized` de Pundit: lo que nadie ha autorizado de forma explícita queda cerrado. Un endpoint nuevo es "solo navegador" hasta que alguien decida abrirlo a los tokens.
+
+### Una consulta por petición
+Comprobar quién llama (cookie o token) es una dependencia aparte, sin scopes. FastAPI cachea cada dependencia durante la petición, así que aunque `current_user` se llame varias veces con scopes distintos, la base de datos se consulta una sola vez.
+
+### 401 frente a 403
+- **401**: no sé quién eres (token desconocido o revocado). Lleva `WWW-Authenticate: Bearer`.
+- **403**: sé quién eres, pero este token no puede hacer esto. Lleva `error="insufficient_scope"` y los scopes que harían falta (RFC 6750).
+
+## Preguntas para revisar el PR 26
+1. Si mañana añades `DELETE /api/households/{id}/expenses/{id}` usando `CurrentHousehold`, ¿podría usarlo un token con `expenses:write`? ¿Qué cambiarías para permitirlo?
+2. Alguien roba un backup de la base de datos. ¿Puede usar los tokens que hay en `api_tokens`? ¿Por qué basta con SHA-256 y no hace falta Argon2 como en las contraseñas?
+3. ¿Por qué `last_used_at` solo se actualiza una vez por minuto?
+4. Si una petición trae a la vez cookie y token, ¿cuál gana? ¿Por qué tiene sentido?

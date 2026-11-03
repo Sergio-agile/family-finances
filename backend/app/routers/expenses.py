@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import exists, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.auth import CurrentHousehold, CurrentUser
+from app.auth import ExpensesWriter, ReadableHousehold, WritableHousehold
 from app.db import SessionDep
 from app.models import Category, Expense, Membership, SpendingType
 from app.schemas import ExpenseCreate, ExpenseRead, ExpenseUpdate
@@ -38,7 +38,7 @@ def ensure_references_exist(session: Session, household_id: int, fields: dict) -
 
 
 @router.get("", response_model=list[ExpenseRead])
-def list_expenses(household: CurrentHousehold, session: SessionDep, month: Month) -> list[Expense]:
+def list_expenses(household: ReadableHousehold, session: SessionDep, month: Month) -> list[Expense]:
     """The household's expenses of one month (YYYY-MM), newest first."""
     year, month_number = map(int, month.split("-"))
     start = date(year, month_number, 1)
@@ -63,7 +63,7 @@ def list_expenses(household: CurrentHousehold, session: SessionDep, month: Month
 
 @router.post("", response_model=ExpenseRead, status_code=status.HTTP_201_CREATED)
 def create_expense(
-    payload: ExpenseCreate, household: CurrentHousehold, user: CurrentUser, session: SessionDep
+    payload: ExpenseCreate, household: WritableHousehold, user: ExpensesWriter, session: SessionDep
 ) -> Expense:
     ensure_references_exist(session, household.id, payload.model_dump())
 
@@ -76,7 +76,7 @@ def create_expense(
 
 @router.patch("/{expense_id}", response_model=ExpenseRead)
 def update_expense(
-    expense_id: int, payload: ExpenseUpdate, household: CurrentHousehold, session: SessionDep
+    expense_id: int, payload: ExpenseUpdate, household: WritableHousehold, session: SessionDep
 ) -> Expense:
     # Looked up inside the household: another household's expense is as missing as a wrong id.
     expense = session.scalar(

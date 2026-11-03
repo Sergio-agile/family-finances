@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import (
     AfterValidator,
@@ -120,3 +120,28 @@ class UserRead(BaseModel):
 class InvitationRead(BaseModel):
     url: str
     expires_at: datetime
+
+
+# What an API token may do. `expenses:write` implies `expenses:read` (see app.auth).
+Scope = Literal["expenses:read", "expenses:write"]
+TokenName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
+
+
+class ApiTokenCreate(BaseModel):
+    name: TokenName = Field(examples=["n8n bank import"])
+    # A set: the same scope twice is the same permission.
+    scopes: set[Scope] = Field(min_length=1, examples=[["expenses:write"]])
+
+
+class ApiTokenRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    scopes: list[Scope]
+    created_at: datetime
+    last_used_at: datetime | None
+
+
+class ApiTokenCreated(ApiTokenRead):
+    token: str = Field(description="Shown only now: store it, it cannot be retrieved again")

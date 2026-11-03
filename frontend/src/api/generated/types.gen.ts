@@ -5,6 +5,78 @@ export type ClientOptions = {
 };
 
 /**
+ * ApiTokenCreate
+ */
+export type ApiTokenCreate = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Scopes
+     */
+    scopes: Array<'expenses:read' | 'expenses:write'>;
+};
+
+/**
+ * ApiTokenCreated
+ */
+export type ApiTokenCreated = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Scopes
+     */
+    scopes: Array<'expenses:read' | 'expenses:write'>;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Last Used At
+     */
+    last_used_at: string | null;
+    /**
+     * Token
+     *
+     * Shown only now: store it, it cannot be retrieved again
+     */
+    token: string;
+};
+
+/**
+ * ApiTokenRead
+ */
+export type ApiTokenRead = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Scopes
+     */
+    scopes: Array<'expenses:read' | 'expenses:write'>;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Last Used At
+     */
+    last_used_at: string | null;
+};
+
+/**
  * CategoryRead
  */
 export type CategoryRead = {
@@ -516,6 +588,97 @@ export type ListMembersResponses = {
 
 export type ListMembersResponse = ListMembersResponses[keyof ListMembersResponses];
 
+export type ListSpendingTypesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/spending-types';
+};
+
+export type ListSpendingTypesResponses = {
+    /**
+     * Response List Spending Types
+     *
+     * Successful Response
+     */
+    200: Array<SpendingTypeRead>;
+};
+
+export type ListSpendingTypesResponse = ListSpendingTypesResponses[keyof ListSpendingTypesResponses];
+
+export type ListApiTokensData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/tokens';
+};
+
+export type ListApiTokensResponses = {
+    /**
+     * Response List Api Tokens
+     *
+     * Successful Response
+     */
+    200: Array<ApiTokenRead>;
+};
+
+export type ListApiTokensResponse = ListApiTokensResponses[keyof ListApiTokensResponses];
+
+export type CreateApiTokenData = {
+    body: ApiTokenCreate;
+    path?: never;
+    query?: never;
+    url: '/api/tokens';
+};
+
+export type CreateApiTokenErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateApiTokenError = CreateApiTokenErrors[keyof CreateApiTokenErrors];
+
+export type CreateApiTokenResponses = {
+    /**
+     * Successful Response
+     */
+    201: ApiTokenCreated;
+};
+
+export type CreateApiTokenResponse = CreateApiTokenResponses[keyof CreateApiTokenResponses];
+
+export type RevokeApiTokenData = {
+    body?: never;
+    path: {
+        /**
+         * Token Id
+         */
+        token_id: number;
+    };
+    query?: never;
+    url: '/api/tokens/{token_id}';
+};
+
+export type RevokeApiTokenErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RevokeApiTokenError = RevokeApiTokenErrors[keyof RevokeApiTokenErrors];
+
+export type RevokeApiTokenResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type RevokeApiTokenResponse = RevokeApiTokenResponses[keyof RevokeApiTokenResponses];
+
 export type InviteToHouseholdData = {
     body?: never;
     path: {
@@ -545,24 +708,6 @@ export type InviteToHouseholdResponses = {
 };
 
 export type InviteToHouseholdResponse = InviteToHouseholdResponses[keyof InviteToHouseholdResponses];
-
-export type ListSpendingTypesData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/spending-types';
-};
-
-export type ListSpendingTypesResponses = {
-    /**
-     * Response List Spending Types
-     *
-     * Successful Response
-     */
-    200: Array<SpendingTypeRead>;
-};
-
-export type ListSpendingTypesResponse = ListSpendingTypesResponses[keyof ListSpendingTypesResponses];
 
 export type HealthData = {
     body?: never;

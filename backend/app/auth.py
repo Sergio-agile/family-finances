@@ -1,19 +1,27 @@
-"""Passwords, server-side sessions, and the `CurrentUser` and `CurrentHousehold` dependencies."""
+"""Passwords, server-side sessions, API tokens, and the `CurrentUser` and `CurrentHousehold`
+dependencies."""
 
 import hashlib
 import secrets
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, get_args
 
-from fastapi import Depends, HTTPException, Response, status
-from fastapi.security import APIKeyCookie
+from fastapi import Depends, HTTPException, Response, Security, status
+from fastapi.security import (
+    APIKeyCookie,
+    HTTPAuthorizationCredentials,
+    HTTPBearer,
+    SecurityScopes,
+)
 from pwdlib import PasswordHash
 from sqlalchemy import delete, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.config import settings
 from app.db import SessionDep
-from app.models import Household, Membership, User, UserSession
+from app.models import ApiToken, Household, Membership, User, UserSession
+from app.schemas import Scope
 
 SESSION_COOKIE = "session"
 SESSION_TTL = timedelta(days=30)
@@ -85,25 +93,111 @@ def end_session(session: Session, response: Response, token: str | None) -> None
 
 SessionToken = Annotated[str | None, Depends(session_cookie)]
 
+# API tokens: `Authorization: Bearer ff_…`. Also documents the scheme in Swagger.
+API_TOKEN_PREFIX = "ff_"  # noqa: S105 (a public prefix, not a secret)
+bearer = HTTPBearer(
+    auto_error=False,
+    description="Personal access token (`ff_…`), created in the app. Scopes: "
+    + ", ".join(f"`{scope}`" for scope in get_args(Scope)),
+)
+BearerToken = Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]
 
-def current_user(session: SessionDep, token: SessionToken) -> User:
-    """FastAPI dependency: the logged-in user, or 401."""
-    if token is None:
+READ_EXPENSES: Scope = "expenses:read"
+WRITE_EXPENSES: Scope = "expenses:write"
+# Like GitHub's "read and write": a token that writes expenses must read categories to do it.
+IMPLIED_SCOPES: dict[str, set[str]] = {WRITE_EXPENSES: {READ_EXPENSES}}
+# last_used_at is a hint, not an audit log: one write a minute is enough during a bulk import.
+LAST_USED_PRECISION = timedelta(minutes=1)
+
+
+def new_api_token() -> tuple[str, bytes]:
+    """Like `new_token`, with a prefix that makes a leaked token recognizable (secret scanners)."""
+    token = API_TOKEN_PREFIX + secrets.token_urlsafe(32)
+    return token, hash_token(token)
+
+
+@dataclass(frozen=True)
+class Credentials:
+    user: User
+    # None for a browser session, which may do anything its user can.
+    scopes: frozenset[str] | None
+
+
+def request_credentials(
+    session: SessionDep, cookie_token: SessionToken, bearer_token: BearerToken
+) -> Credentials:
+    """Who is calling: an API token if one is sent, else the session cookie; otherwise 401.
+    One lookup per request, whatever scopes each endpoint asks for (FastAPI caches it)."""
+    if bearer_token is not None:
+        return api_token_credentials(session, bearer_token.credentials)
+    if cookie_token is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not logged in")
     user = session.scalar(
         select(User)
         .join(UserSession)
         .where(
-            UserSession.token_hash == hash_token(token),
+            UserSession.token_hash == hash_token(cookie_token),
             UserSession.expires_at > datetime.now(UTC),
         )
     )
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not logged in")
-    return user
+    return Credentials(user, scopes=None)
+
+
+def api_token_credentials(session: Session, token: str) -> Credentials:
+    api_token = session.scalar(
+        select(ApiToken)
+        .options(joinedload(ApiToken.user))
+        .where(ApiToken.token_hash == hash_token(token))
+    )
+    if api_token is None:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "Invalid or revoked API token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    now = datetime.now(UTC)
+    if api_token.last_used_at is None or api_token.last_used_at < now - LAST_USED_PRECISION:
+        api_token.last_used_at = now
+        session.commit()
+    scopes = set(api_token.scopes)
+    for scope in api_token.scopes:
+        scopes |= IMPLIED_SCOPES.get(scope, set())
+    return Credentials(api_token.user, frozenset(scopes))
+
+
+def current_user(
+    security_scopes: SecurityScopes,
+    credentials: Annotated[Credentials, Depends(request_credentials)],
+) -> User:
+    """FastAPI dependency: the user making the request, or 401.
+
+    Browser sessions pass everywhere. API tokens are denied by default: they only pass where the
+    endpoint declares scopes, `Security(current_user, scopes=[…])`, and the token has them all.
+    So a leaked token can never create tokens or invitations, nor reach a new endpoint by
+    accident."""
+    if credentials.scopes is not None:
+        if not security_scopes.scopes:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Not available with an API token")
+        missing = set(security_scopes.scopes) - credentials.scopes
+        if missing:
+            needed = security_scopes.scope_str
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                f"API token lacks scope: {', '.join(sorted(missing))}",
+                # RFC 6750: tells the client which scopes this endpoint needs.
+                headers={
+                    "WWW-Authenticate": f'Bearer error="insufficient_scope", scope="{needed}"'
+                },
+            )
+    return credentials.user
 
 
 CurrentUser = Annotated[User, Depends(current_user)]
+# For endpoints that API tokens may use; scopes declared here reach `current_user` through
+# `current_household` too.
+ExpensesWriter = Annotated[User, Security(current_user, scopes=[WRITE_EXPENSES])]
 
 
 def current_household(household_id: int, user: CurrentUser, session: SessionDep) -> Household:
@@ -120,3 +214,5 @@ def current_household(household_id: int, user: CurrentUser, session: SessionDep)
 
 
 CurrentHousehold = Annotated[Household, Depends(current_household)]
+ReadableHousehold = Annotated[Household, Security(current_household, scopes=[READ_EXPENSES])]
+WritableHousehold = Annotated[Household, Security(current_household, scopes=[WRITE_EXPENSES])]
