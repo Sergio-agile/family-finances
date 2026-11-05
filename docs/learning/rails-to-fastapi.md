@@ -616,3 +616,23 @@ Comprobar quién llama (cookie o token) es una dependencia aparte, sin scopes. F
 2. Alguien roba un backup de la base de datos. ¿Puede usar los tokens que hay en `api_tokens`? ¿Por qué basta con SHA-256 y no hace falta Argon2 como en las contraseñas?
 3. ¿Por qué `last_used_at` solo se actualiza una vez por minuto?
 4. Si una petición trae a la vez cookie y token, ¿cuál gana? ¿Por qué tiene sentido?
+
+## Conceptos del PR 27: pantalla de tokens
+
+| Rails | React / TanStack Query | En este repo |
+|---|---|---|
+| una sección plegable con Stimulus | `<details>` / `<summary>` nativos, sin JavaScript propio | `ApiTokensSection` |
+| cargar un frame de Turbo solo al abrirlo (`loading="lazy"`) | `useQuery({ enabled })` | `useApiTokens(enabled)` |
+| `flash.now[:token]` que solo se muestra una vez | el `data` de la mutación, que se olvida con `reset()` | `NewToken` |
+| `data-turbo-confirm` | `window.confirm` antes de `mutate` | `TokenRow` |
+
+### Cargar solo cuando hace falta
+La lista de tokens no se pide al abrir la app: casi nunca se mira. `TokensPanel` solo se monta cuando el `<details>` está abierto, y es entonces cuando `useApiTokens` hace la petición. Si lo cierras y lo vuelves a abrir, TanStack Query devuelve lo que ya tenía en caché.
+
+### Un secreto que solo vive en memoria
+El token completo llega únicamente en la respuesta de `POST /api/tokens`. No se guarda en el estado de la app ni en la caché de la lista: se queda en el `data` de esa mutación hasta que pulsas «Hecho» (`create.reset()`). A partir de ahí no hay forma de recuperarlo, ni para la app ni para el servidor.
+
+## Preguntas para revisar el PR 27
+1. ¿Qué peticiones hace la app al cargar la página principal? ¿Ha cambiado algo con este PR?
+2. Si recargas la página justo después de crear un token, sin copiarlo, ¿puedes recuperarlo? ¿Qué harías entonces?
+3. ¿Por qué después de crear o revocar un token basta con `invalidateQueries` en vez de modificar la lista a mano?

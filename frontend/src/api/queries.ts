@@ -1,16 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  createApiToken,
   createExpense,
   getCurrentUser,
   inviteToHousehold,
+  listApiTokens,
   listCategories,
   listExpenses,
   listMembers,
   listSpendingTypes,
   logIn,
   logOut,
+  revokeApiToken,
   signUp,
   updateExpense,
+  type ApiTokenCreate,
   type ExpenseCreate,
   type ExpenseUpdate,
   type LogIn,
@@ -179,5 +183,35 @@ export function useCreateInvitation() {
   return useMutation({
     mutationFn: async () =>
       (await inviteToHousehold({ path: { household_id: householdId }, throwOnError: true })).data,
+  })
+}
+
+const apiTokensKey = ['api-tokens']
+
+/** The user's API tokens. `enabled`: only fetched once the section is opened. */
+export function useApiTokens(enabled: boolean) {
+  return useQuery({
+    queryKey: apiTokensKey,
+    queryFn: async () => (await listApiTokens({ throwOnError: true })).data,
+    enabled,
+  })
+}
+
+/** Creates a token. Its secret is only in this mutation's `data`: the API never shows it again. */
+export function useCreateApiToken() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (body: ApiTokenCreate) => dataOrThrow(createApiToken({ body })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: apiTokensKey }),
+  })
+}
+
+export function useRevokeApiToken() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: number) => revokeApiToken({ path: { token_id: id }, throwOnError: true }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: apiTokensKey }),
   })
 }
