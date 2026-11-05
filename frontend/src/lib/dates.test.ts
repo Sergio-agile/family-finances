@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { currentMonth, formatDay, todayISO } from './dates'
+import { currentMonth, formatDate, formatDay, todayISO } from './dates'
 
 describe('todayISO', () => {
   it('uses the local date, even just after midnight', () => {
@@ -20,5 +20,11 @@ describe('currentMonth', () => {
 describe('formatDay', () => {
   it('formats a date in Spanish', () => {
     expect(formatDay('2026-10-23')).toBe('viernes, 23 de octubre')
+  })
+})
+
+describe('formatDate', () => {
+  it('formats an API timestamp as a short date', () => {
+    expect(formatDate('2026-11-03T10:18:05Z')).toBe('3 nov 2026')
   })
 })

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useCurrentUser, useLogOut } from './api/queries'
 import type { UserRead } from './api/generated'
+import { ApiTokensSection } from './components/ApiTokensSection'
 import { AuthScreen } from './components/AuthScreen'
 import { ExpenseForm } from './components/ExpenseForm'
 import { ExpenseList } from './components/ExpenseList'
@@ -59,6 +60,7 @@ function Home({ user }: { user: UserRead }) {
       <ExpenseForm />
       <ExpenseList month={month} />
       <InviteSection householdName={user.households[0].name} />
+      <ApiTokensSection />
 
       <footer className="flex items-center justify-between gap-3 text-sm text-gray-500">
         <span className="truncate">{user.name}</span>

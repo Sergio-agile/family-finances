@@ -22,3 +22,14 @@ export function formatDay(isoDate: string): string {
   // Appending a time makes the browser parse it as local midnight instead of UTC.
   return dayFormatter.format(new Date(`${isoDate}T00:00`))
 }
+
+const dateFormatter = new Intl.DateTimeFormat('es-ES', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+})
+
+/** A timestamp from the API → "3 nov 2026", in the user's timezone. */
+export function formatDate(isoDateTime: string): string {
+  return dateFormatter.format(new Date(isoDateTime))
+}
