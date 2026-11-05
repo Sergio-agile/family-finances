@@ -1,7 +1,7 @@
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from fastapi import Depends, FastAPI, Request, status
+from fastapi import Depends, FastAPI, Request, Security, status
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
@@ -9,10 +9,18 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from app.auth import current_user
+from app.auth import READ_EXPENSES, current_user
 from app.config import settings
 from app.db import SessionDep
-from app.routers import auth, categories, expenses, households, invitations, spending_types
+from app.routers import (
+    api_tokens,
+    auth,
+    categories,
+    expenses,
+    households,
+    invitations,
+    spending_types,
+)
 
 
 def operation_id(route: APIRoute) -> str:
@@ -27,13 +35,12 @@ docs = {"docs_url": None, "redoc_url": None, "openapi_url": None} if settings.is
 app = FastAPI(title="Family Finances API", generate_unique_id_function=operation_id, **docs)
 app.include_router(auth.router)
 # Everything else needs a logged-in user. Declared here, once, so no router can forget it.
-for router in (
-    categories.router,
-    expenses.router,
-    households.router,
-    invitations.router,
-    spending_types.router,
-):
+# Expenses and the data needed to write them: also open to API tokens with `expenses:read`
+# (write endpoints ask for `expenses:write` on top).
+for router in (categories.router, expenses.router, households.router, spending_types.router):
+    app.include_router(router, dependencies=[Security(current_user, scopes=[READ_EXPENSES])])
+# Browser sessions only: a leaked token must not create tokens or invite anyone.
+for router in (api_tokens.router, invitations.router):
     app.include_router(router, dependencies=[Depends(current_user)])
 
 

@@ -129,6 +129,9 @@
         "security": [
           {
             "APIKeyCookie": []
+          },
+          {
+            "HTTPBearer": []
           }
         ]
       }
@@ -158,7 +161,14 @@
         },
         "security": [
           {
-            "APIKeyCookie": []
+            "APIKeyCookie": [
+              "expenses:read"
+            ]
+          },
+          {
+            "HTTPBearer": [
+              "expenses:read"
+            ]
           }
         ]
       }
@@ -173,7 +183,14 @@
         "operationId": "list_expenses",
         "security": [
           {
-            "APIKeyCookie": []
+            "APIKeyCookie": [
+              "expenses:read"
+            ]
+          },
+          {
+            "HTTPBearer": [
+              "expenses:read"
+            ]
           }
         ],
         "parameters": [
@@ -235,7 +252,16 @@
         "operationId": "create_expense",
         "security": [
           {
-            "APIKeyCookie": []
+            "APIKeyCookie": [
+              "expenses:read",
+              "expenses:write"
+            ]
+          },
+          {
+            "HTTPBearer": [
+              "expenses:read",
+              "expenses:write"
+            ]
           }
         ],
         "parameters": [
@@ -292,7 +318,16 @@
         "operationId": "update_expense",
         "security": [
           {
-            "APIKeyCookie": []
+            "APIKeyCookie": [
+              "expenses:read",
+              "expenses:write"
+            ]
+          },
+          {
+            "HTTPBearer": [
+              "expenses:read",
+              "expenses:write"
+            ]
           }
         ],
         "parameters": [
@@ -359,7 +394,14 @@
         "operationId": "list_members",
         "security": [
           {
-            "APIKeyCookie": []
+            "APIKeyCookie": [
+              "expenses:read"
+            ]
+          },
+          {
+            "HTTPBearer": [
+              "expenses:read"
+            ]
           }
         ],
         "parameters": [
@@ -384,54 +426,6 @@
                     "$ref": "#/components/schemas/MemberRead"
                   },
                   "title": "Response List Members"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/households/{household_id}/invitations": {
-      "post": {
-        "tags": [
-          "invitations"
-        ],
-        "summary": "Invite To Household",
-        "description": "A one-time sign-up link that joins this household. Any member can create one.",
-        "operationId": "invite_to_household",
-        "security": [
-          {
-            "APIKeyCookie": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "household_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Household Id"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InvitationRead"
                 }
               }
             }
@@ -475,9 +469,193 @@
         },
         "security": [
           {
-            "APIKeyCookie": []
+            "APIKeyCookie": [
+              "expenses:read"
+            ]
+          },
+          {
+            "HTTPBearer": [
+              "expenses:read"
+            ]
           }
         ]
+      }
+    },
+    "/api/tokens": {
+      "get": {
+        "tags": [
+          "api tokens"
+        ],
+        "summary": "List Api Tokens",
+        "description": "Your API tokens, newest first. The tokens themselves are never shown again.",
+        "operationId": "list_api_tokens",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ApiTokenRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Api Tokens"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "api tokens"
+        ],
+        "summary": "Create Api Token",
+        "description": "A new token acting as you, limited to its scopes. The response is the only time the token\nis shown: only its hash is stored.",
+        "operationId": "create_api_token",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiTokenCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiTokenCreated"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/tokens/{token_id}": {
+      "delete": {
+        "tags": [
+          "api tokens"
+        ],
+        "summary": "Revoke Api Token",
+        "description": "Revoke one of your tokens: it stops working at once.",
+        "operationId": "revoke_api_token",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "token_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Token Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/households/{household_id}/invitations": {
+      "post": {
+        "tags": [
+          "invitations"
+        ],
+        "summary": "Invite To Household",
+        "description": "A one-time sign-up link that joins this household. Any member can create one.",
+        "operationId": "invite_to_household",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "household_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Household Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/health": {
@@ -501,6 +679,147 @@
   },
   "components": {
     "schemas": {
+      "ApiTokenCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Name",
+            "examples": [
+              "n8n bank import"
+            ]
+          },
+          "scopes": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "expenses:read",
+                "expenses:write"
+              ]
+            },
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "title": "Scopes",
+            "examples": [
+              [
+                "expenses:write"
+              ]
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "scopes"
+        ],
+        "title": "ApiTokenCreate"
+      },
+      "ApiTokenCreated": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "scopes": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "expenses:read",
+                "expenses:write"
+              ]
+            },
+            "type": "array",
+            "title": "Scopes"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "token": {
+            "type": "string",
+            "title": "Token",
+            "description": "Shown only now: store it, it cannot be retrieved again"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "scopes",
+          "created_at",
+          "last_used_at",
+          "token"
+        ],
+        "title": "ApiTokenCreated"
+      },
+      "ApiTokenRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "scopes": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "expenses:read",
+                "expenses:write"
+              ]
+            },
+            "type": "array",
+            "title": "Scopes"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "scopes",
+          "created_at",
+          "last_used_at"
+        ],
+        "title": "ApiTokenRead"
+      },
       "CategoryRead": {
         "properties": {
           "id": {
@@ -952,6 +1271,11 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "session"
+      },
+      "HTTPBearer": {
+        "type": "http",
+        "description": "Personal access token (`ff_…`), created in the app. Scopes: `expenses:read`, `expenses:write`",
+        "scheme": "bearer"
       }
     }
   }

@@ -1,6 +1,7 @@
 from datetime import date, datetime
 
 from sqlalchemy import (
+    ARRAY,
     DateTime,
     ForeignKey,
     Index,
@@ -98,6 +99,26 @@ class UserSession(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ApiToken(Base):
+    """A personal access token for scripts and integrations (n8n), sent as `Authorization: Bearer
+    ff_…`. It acts as its user, limited to its scopes. As with sessions, only its SHA-256 is
+    stored; the token itself is shown once, when it is created."""
+
+    __tablename__ = "api_tokens"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    # What it is for ("n8n bank import"), so the user knows which one to revoke.
+    name: Mapped[str] = mapped_column(String(50))
+    token_hash: Mapped[bytes] = mapped_column(LargeBinary(32), unique=True)
+    scopes: Mapped[list[str]] = mapped_column(ARRAY(String(30)))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # A token unused for months can go; one used when it shouldn't be is a warning sign.
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    user: Mapped[User] = relationship()
 
 
 class Household(Base):
