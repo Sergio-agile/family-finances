@@ -653,3 +653,23 @@ Sin router, una "pantalla" de ajustes como estado de `App` tendría un problema:
 ## Preguntas para revisar el PR 28
 1. ¿Por qué `SettingsDialog` se monta solo cuando `settingsOpen` es `true`, en vez de estar siempre en la página y ocultarse con CSS?
 2. Si cierras sesión desde Ajustes, ¿quién cierra el diálogo?
+
+## Conceptos del PR 29: arrancar más rápido
+
+| Rails | Python | En este repo |
+|---|---|---|
+| `bootsnap` (cachea la carga de código) | bytecode precompilado (`python -m compileall`) | `Dockerfile` |
+| `bin/docker-entrypoint` que hace `db:prepare` y luego `exec "$@"` | un solo script de Python: Alembic por código y `uvicorn.run` | `app/serve.py` |
+
+### Medir antes de arreglar
+La sospecha inicial era que el contenedor viejo no se cerraba (10 s esperando a Docker). Medido en el servidor: se cierra en 1,5 s. El tiempo de verdad se iba en **importar la app**: unos 5 s en un servidor de 1 CPU con swap, y se pagaba dos veces, una para Alembic y otra para la CLI de `fastapi`, que además carga sus propias librerías. `python -X importtime -c "import app.main"` enseña qué módulo cuesta cuánto.
+
+### Un proceso en vez de dos
+`app/serve.py` llama a `alembic.command.upgrade` como una función y después a `uvicorn.run`. Lo que Alembic ya importó (SQLAlchemy, los modelos, la configuración) sigue cargado cuando arranca el servidor. Además, como `python -m app.serve` es el proceso 1 del contenedor, ya no hace falta el truco del `exec` en un `sh -c`.
+
+### `.pyc` en la imagen
+Python guarda el bytecode de cada módulo en `__pycache__` para no recompilarlo. El contenedor corre con un usuario sin permiso para escribir en `/app`, así que no podía guardarlo y recompilaba la app en cada arranque. Ahora se compila una vez al construir la imagen.
+
+## Preguntas para revisar el PR 29
+1. Si una migración falla, ¿qué hace `app/serve.py`? ¿Llega a arrancar uvicorn?
+2. ¿Por qué no basta con medir en tu Mac para saber cuánto tarda en arrancar en el servidor?

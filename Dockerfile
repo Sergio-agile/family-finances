@@ -27,10 +27,11 @@ COPY backend/migrations migrations
 COPY backend/app app
 COPY --from=frontend /frontend/dist frontend-dist
 ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 FRONTEND_DIST=/app/frontend-dist
+# Compiled now, as root: the app user can't write __pycache__, so Python would recompile the
+# app's modules on every start.
+RUN python -m compileall -q app migrations
 USER app
 EXPOSE 8000
-# Migrate, then serve. One worker: a family's traffic, 1 GB of RAM on the server.
-# --proxy-headers: the client IP comes from Caddy's X-Forwarded-For (login throttling, ADR 0008).
-# Any forwarder is trusted because no port is published: only Caddy, on the proxy network, can
-# reach this container, and Caddy replaces any X-Forwarded-For a client sends.
-CMD ["sh", "-c", "alembic upgrade head && exec fastapi run app/main.py --port 8000 --workers 1 --proxy-headers --forwarded-allow-ips '*'"]
+# Migrate, then serve, in one process (app/serve.py): importing the app once instead of twice
+# roughly halves the downtime of a deploy. One worker: a family's traffic, 1 GB of RAM.
+CMD ["python", "-m", "app.serve"]
