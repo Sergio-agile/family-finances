@@ -636,3 +636,20 @@ El token completo llega únicamente en la respuesta de `POST /api/tokens`. No se
 1. ¿Qué peticiones hace la app al cargar la página principal? ¿Ha cambiado algo con este PR?
 2. Si recargas la página justo después de crear un token, sin copiarlo, ¿puedes recuperarlo? ¿Qué harías entonces?
 3. ¿Por qué después de crear o revocar un token basta con `invalidateQueries` en vez de modificar la lista a mano?
+
+## Conceptos del PR 28: Ajustes en un diálogo
+
+| Rails | React | En este repo |
+|---|---|---|
+| un partial compartido (`_modal.html.erb`) | un componente compartido con `children` | `Dialog` |
+| `yield` dentro del partial | la prop `children: ReactNode` | `Dialog`, `Section` |
+
+### Extraer cuando algo se repite
+`EditExpenseDialog` ya resolvía cómo abrir un `<dialog>` nativo, cerrarlo con Escape o tocando fuera y avisar al padre. Ajustes necesitaba lo mismo, así que esa parte pasa a `Dialog` y los dos lo usan; cada uno solo decide su contenido y su aspecto (`className`).
+
+### Un diálogo en vez de una página
+Sin router, una "pantalla" de ajustes como estado de `App` tendría un problema: el botón «atrás» del móvil saldría de la app. Un `<dialog>` modal nativo lo evita: Chrome en Android lo cierra con «atrás», como se espera de una pantalla. Cuando lleguen los informes meteremos un router, y Ajustes pasará a ser una ruta.
+
+## Preguntas para revisar el PR 28
+1. ¿Por qué `SettingsDialog` se monta solo cuando `settingsOpen` es `true`, en vez de estar siempre en la página y ocultarse con CSS?
+2. Si cierras sesión desde Ajustes, ¿quién cierra el diálogo?
