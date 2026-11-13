@@ -289,6 +289,21 @@ def test_update_returns_404_for_unknown_expense(client, expenses_url):
     assert response.status_code == 404
 
 
+def test_deletes_an_expense(client, session, expenses_url, coffee):
+    coffee_id = coffee.id  # read before the request: afterwards the object points at no row
+
+    response = client.delete(f"{expenses_url}/{coffee_id}")
+
+    assert response.status_code == 204
+    assert session.get(Expense, coffee_id) is None
+
+
+def test_delete_returns_404_for_unknown_expense(client, expenses_url):
+    response = client.delete(f"{expenses_url}/999999")
+
+    assert response.status_code == 404
+
+
 @pytest.mark.parametrize(
     ("changes", "detail"),
     [
@@ -366,6 +381,17 @@ def test_cannot_edit_another_households_expense_through_own_household(
 
     assert response.status_code == 404
     assert theirs.concept == "De Luis"
+
+
+def test_cannot_delete_another_households_expense_through_own_household(
+    client, session, expenses_url, make_expense, other_household
+):
+    theirs = make_expense(concept="De Luis", household_id=other_household.id)
+
+    response = client.delete(f"{expenses_url}/{theirs.id}")
+
+    assert response.status_code == 404
+    assert session.get(Expense, theirs.id) is not None
 
 
 def test_members_of_the_same_household_share_expenses(

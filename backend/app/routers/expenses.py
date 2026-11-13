@@ -2,7 +2,7 @@ from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import exists, select
+from sqlalchemy import delete, exists, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.auth import ExpensesWriter, ReadableHousehold, WritableHousehold
@@ -94,3 +94,16 @@ def update_expense(
     session.commit()
     session.refresh(expense)
     return expense
+
+
+@router.delete("/{expense_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_expense(expense_id: int, household: WritableHousehold, session: SessionDep) -> None:
+    """Delete an expense for good: there is no trash to restore it from."""
+    # One statement, scoped to the household: another household's expense is as missing as a
+    # wrong id, and nothing is loaded just to be deleted.
+    deleted = session.execute(
+        delete(Expense).where(Expense.id == expense_id, Expense.household_id == household.id)
+    )
+    if deleted.rowcount == 0:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Expense not found")
+    session.commit()

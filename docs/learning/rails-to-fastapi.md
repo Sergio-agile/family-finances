@@ -673,3 +673,25 @@ Python guarda el bytecode de cada módulo en `__pycache__` para no recompilarlo.
 ## Preguntas para revisar el PR 29
 1. Si una migración falla, ¿qué hace `app/serve.py`? ¿Llega a arrancar uvicorn?
 2. ¿Por qué no basta con medir en tu Mac para saber cuánto tarda en arrancar en el servidor?
+
+## Conceptos del PR 32: eliminar un gasto
+
+| Rails | FastAPI / SQLAlchemy | En este repo |
+|---|---|---|
+| `def destroy` + `head :no_content` | `@router.delete(..., status_code=204)` que devuelve `None` | `delete_expense` |
+| `Expense.where(id:, household_id:).delete_all` | `session.execute(delete(Expense).where(...))` | `delete_expense` |
+| `@expense.destroy` (carga el registro y ejecuta callbacks) | `session.delete(objeto)` | no se usa aquí |
+
+### Un solo `DELETE`, sin cargar el gasto
+En vez de buscar el gasto y luego borrarlo (dos consultas), se lanza directamente `DELETE … WHERE id = … AND household_id = …`. Si `rowcount` es 0, o no existe o es de otro hogar: en los dos casos, 404. Es el mismo patrón que ya usaba revocar un token. El precio es el mismo que con `delete_all` en Rails: no hay callbacks. Aquí no los necesitamos.
+
+### Borrado definitivo
+No hay papelera (`deleted_at`): obligaría a filtrar los borrados en cada consulta. Si alguien se equivoca, están las copias diarias (ADR 0011). Por eso el frontend pide confirmación en dos pasos dentro del propio diálogo.
+
+### Objetos "caducados" tras un `commit`
+En los tests, la sesión del test y la de la petición son la misma. Tras el `commit`, SQLAlchemy marca los objetos como caducados y, al leer `coffee.id`, intenta recargarlo… de una fila que ya no existe (`ObjectDeletedError`). Por eso el test guarda el id antes de la petición. En Rails, `@expense.id` sigue disponible después del `destroy` porque ActiveRecord no recarga solo.
+
+## Preguntas para revisar el PR 32
+1. ¿Por qué borrar un gasto de otro hogar responde 404 y no 403?
+2. Un token con solo `expenses:read` intenta borrar: ¿qué responde la API y en qué punto del código se decide?
+3. Después de borrar, ¿cómo se entera la lista del mes de que el gasto ya no está?

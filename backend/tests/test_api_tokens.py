@@ -111,6 +111,14 @@ def test_read_token_cannot_write(anonymous_client, make_api_token, household, gr
     assert 'error="insufficient_scope"' in response.headers["WWW-Authenticate"]
 
 
+def test_read_token_cannot_delete(anonymous_client, make_api_token, household):
+    response = anonymous_client.delete(
+        f"{expenses_url(household)}/1", headers=bearer(make_api_token("expenses:read"))
+    )
+
+    assert response.status_code == 403
+
+
 def test_write_token_creates_expenses_as_its_user_and_can_read(
     anonymous_client, session, make_api_token, user, household, groceries
 ):

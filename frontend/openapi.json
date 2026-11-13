@@ -382,6 +382,63 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "expenses"
+        ],
+        "summary": "Delete Expense",
+        "description": "Delete an expense for good: there is no trash to restore it from.",
+        "operationId": "delete_expense",
+        "security": [
+          {
+            "APIKeyCookie": [
+              "expenses:read",
+              "expenses:write"
+            ]
+          },
+          {
+            "HTTPBearer": [
+              "expenses:read",
+              "expenses:write"
+            ]
+          }
+        ],
+        "parameters": [
+          {
+            "name": "expense_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Expense Id"
+            }
+          },
+          {
+            "name": "household_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Household Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/households/{household_id}/members": {
