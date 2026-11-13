@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { centsToInput, formatCents, parseAmountToCents } from './money'
+import { centsToInput, formatCents, parseAmountToCents, sumCents } from './money'
 
 describe('parseAmountToCents', () => {
   it.each([
@@ -40,5 +40,12 @@ describe('centsToInput', () => {
 
   it('round-trips with parseAmountToCents', () => {
     expect(parseAmountToCents(centsToInput(4207))).toBe(4207)
+  })
+})
+
+describe('sumCents', () => {
+  it('adds up the amounts, and an empty list is zero', () => {
+    expect(sumCents([{ amount_cents: 1250 }, { amount_cents: 29 }])).toBe(1279)
+    expect(sumCents([])).toBe(0)
   })
 })

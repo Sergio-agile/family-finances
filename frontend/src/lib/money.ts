@@ -24,3 +24,8 @@ const euroFormatter = new Intl.NumberFormat('es-ES', { style: 'currency', curren
 export function formatCents(cents: number): string {
   return euroFormatter.format(cents / 100)
 }
+
+/** Total of a list of amounts: what a month's incomes or expenses add up to. */
+export function sumCents(items: { amount_cents: number }[]): number {
+  return items.reduce((sum, item) => sum + item.amount_cents, 0)
+}

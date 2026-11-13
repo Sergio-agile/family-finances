@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from app.models import Category, Expense, Household, User
+from app.models import Category, Expense
 from tests.conftest import PASSWORD
 
 
@@ -84,11 +84,7 @@ def test_creates_an_expense_paid_by_a_member(client, expenses_url, groceries, lu
     assert response.json()["paid_by"] == {"id": luis.id, "name": "Luis"}
 
 
-def test_rejects_a_payer_from_another_household(client, session, expenses_url, groceries):
-    outsider = User(name="Eva", email="eva@example.com", password_hash="unused")
-    session.add(outsider)
-    session.flush()
-
+def test_rejects_a_payer_from_another_household(client, expenses_url, groceries, outsider):
     response = client.post(
         expenses_url,
         json={
@@ -336,14 +332,6 @@ def test_update_rejects_invalid_values(client, expenses_url, coffee, changes):
 
 
 # Another family's data: every route answers 404, as if it did not exist.
-
-
-@pytest.fixture
-def other_household(session) -> Household:
-    household = Household(name="Casa de Luis")
-    session.add(household)
-    session.flush()
-    return household
 
 
 def test_does_not_list_another_households_expenses(

@@ -695,3 +695,29 @@ En los tests, la sesión del test y la de la petición son la misma. Tras el `co
 1. ¿Por qué borrar un gasto de otro hogar responde 404 y no 403?
 2. Un token con solo `expenses:read` intenta borrar: ¿qué responde la API y en qué punto del código se decide?
 3. Después de borrar, ¿cómo se entera la lista del mes de que el gasto ya no está?
+
+## Conceptos del PR 33: ingresos
+
+| Rails | FastAPI / React | En este repo |
+|---|---|---|
+| un *concern* o un módulo con métodos compartidos entre controladores | un módulo de funciones y tipos que importan los dos routers | `app/routers/common.py` |
+| un `scope :in_month` reutilizable | `month_bounds(month)` + el tipo `Month` para el parámetro | `common.py` |
+| un partial de formulario (`_amount_field.html.erb`) | un componente pequeño con props | `AmountField` |
+| `before_action` que solo deja pasar sesiones | el router se registra con `Depends(current_user)` sin scopes | `main.py` |
+
+### Dos tablas, código compartido
+Ingresos y gastos se parecen, pero no son lo mismo (el ADR 0013 lo explica). Lo que comparten no va al esquema sino al código: el parámetro `month`, cómo se convierte en un rango de fechas y la comprobación de que el pagador o el receptor es del hogar. En Rails lo meterías en un concern; aquí son funciones normales en `common.py`.
+
+### Un alias de tipo con validación
+`AmountCents = Annotated[int, Field(gt=0, ...)]` junta el tipo y la regla. `ExpenseCreate` e `IncomeCreate` lo usan, así que "positivo y en céntimos" está escrito una sola vez, igual que ya pasaba con `Concept`.
+
+### El resumen no pide nada nuevo
+`MonthSummary` llama a `useIncomes(month)` y `useExpenses(month)`, los mismos hooks que usan las listas de debajo. TanStack Query reconoce la misma `queryKey` y sirve los datos de la caché: tres componentes, dos peticiones. El total se calcula en cada render a partir de esos datos, sin guardarlo en un estado aparte.
+
+### Un interruptor con `aria-pressed`
+El selector Gasto | Ingreso son dos botones con `aria-pressed`. Así el lector de pantalla anuncia cuál está activo, y Tailwind lo pinta con la variante `aria-pressed:`, sin clases condicionales en JavaScript.
+
+## Preguntas para revisar el PR 33
+1. Si un día quieres que n8n meta las nóminas, ¿qué tendrías que cambiar para que un token pueda crear ingresos?
+2. ¿Qué pasa con los ingresos de alguien si se borra su usuario? ¿Y si se borra el hogar?
+3. Al cambiar de Gasto a Ingreso a mitad de escribir, ¿qué pasa con lo que habías tecleado? ¿Te parece bien?

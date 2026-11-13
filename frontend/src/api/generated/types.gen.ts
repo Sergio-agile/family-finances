@@ -226,6 +226,60 @@ export type HouseholdRead = {
 };
 
 /**
+ * IncomeCreate
+ */
+export type IncomeCreate = {
+    /**
+     * Amount Cents
+     *
+     * Amount in cents: 12.50 € is 1250
+     */
+    amount_cents: number;
+    /**
+     * Concept
+     */
+    concept: string;
+    /**
+     * Received By Id
+     *
+     * The member who received it; null: not assigned yet
+     */
+    received_by_id?: number | null;
+    /**
+     * Received On
+     */
+    received_on?: string;
+};
+
+/**
+ * IncomeRead
+ */
+export type IncomeRead = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Amount Cents
+     */
+    amount_cents: number;
+    /**
+     * Concept
+     */
+    concept: string;
+    /**
+     * Received On
+     */
+    received_on: string;
+    received_by: MemberRead | null;
+    created_by: MemberRead;
+    /**
+     * Created At
+     */
+    created_at: string;
+};
+
+/**
  * InvitationRead
  */
 export type InvitationRead = {
@@ -712,6 +766,73 @@ export type RevokeApiTokenResponses = {
 };
 
 export type RevokeApiTokenResponse = RevokeApiTokenResponses[keyof RevokeApiTokenResponses];
+
+export type ListIncomesData = {
+    body?: never;
+    path: {
+        /**
+         * Household Id
+         */
+        household_id: number;
+    };
+    query: {
+        /**
+         * Month
+         */
+        month: string;
+    };
+    url: '/api/households/{household_id}/incomes';
+};
+
+export type ListIncomesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListIncomesError = ListIncomesErrors[keyof ListIncomesErrors];
+
+export type ListIncomesResponses = {
+    /**
+     * Response List Incomes
+     *
+     * Successful Response
+     */
+    200: Array<IncomeRead>;
+};
+
+export type ListIncomesResponse = ListIncomesResponses[keyof ListIncomesResponses];
+
+export type CreateIncomeData = {
+    body: IncomeCreate;
+    path: {
+        /**
+         * Household Id
+         */
+        household_id: number;
+    };
+    query?: never;
+    url: '/api/households/{household_id}/incomes';
+};
+
+export type CreateIncomeErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateIncomeError = CreateIncomeErrors[keyof CreateIncomeErrors];
+
+export type CreateIncomeResponses = {
+    /**
+     * Successful Response
+     */
+    201: IncomeRead;
+};
+
+export type CreateIncomeResponse = CreateIncomeResponses[keyof CreateIncomeResponses];
 
 export type InviteToHouseholdData = {
     body?: never;

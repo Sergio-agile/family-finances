@@ -664,6 +664,132 @@
         }
       }
     },
+    "/api/households/{household_id}/incomes": {
+      "get": {
+        "tags": [
+          "incomes"
+        ],
+        "summary": "List Incomes",
+        "description": "The household's incomes of one month (YYYY-MM), newest first.",
+        "operationId": "list_incomes",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "household_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Household Id"
+            }
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "examples": [
+                "2026-10"
+              ],
+              "title": "Month"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IncomeRead"
+                  },
+                  "title": "Response List Incomes"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "incomes"
+        ],
+        "summary": "Create Income",
+        "operationId": "create_income",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "household_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Household Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncomeCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncomeRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/households/{household_id}/invitations": {
       "post": {
         "tags": [
@@ -1140,6 +1266,95 @@
           "name"
         ],
         "title": "HouseholdRead"
+      },
+      "IncomeCreate": {
+        "properties": {
+          "amount_cents": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount Cents",
+            "description": "Amount in cents: 12.50 € is 1250"
+          },
+          "concept": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Concept"
+          },
+          "received_by_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Received By Id",
+            "description": "The member who received it; null: not assigned yet"
+          },
+          "received_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Received On"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount_cents",
+          "concept"
+        ],
+        "title": "IncomeCreate"
+      },
+      "IncomeRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "amount_cents": {
+            "type": "integer",
+            "title": "Amount Cents"
+          },
+          "concept": {
+            "type": "string",
+            "title": "Concept"
+          },
+          "received_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Received On"
+          },
+          "received_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MemberRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_by": {
+            "$ref": "#/components/schemas/MemberRead"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "amount_cents",
+          "concept",
+          "received_on",
+          "received_by",
+          "created_by",
+          "created_at"
+        ],
+        "title": "IncomeRead"
       },
       "InvitationRead": {
         "properties": {

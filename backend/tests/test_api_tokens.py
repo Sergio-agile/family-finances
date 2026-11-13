@@ -147,6 +147,8 @@ def test_records_when_a_token_was_last_used(anonymous_client, session, make_api_
         ("get", "/api/tokens"),
         ("post", "/api/tokens"),
         ("post", "/api/households/{household_id}/invitations"),
+        ("get", "/api/households/{household_id}/incomes?month=2026-11"),
+        ("post", "/api/households/{household_id}/incomes"),
     ],
 )
 def test_session_only_endpoints_refuse_tokens(

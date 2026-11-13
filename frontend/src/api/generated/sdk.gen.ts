@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateApiTokenData, CreateApiTokenErrors, CreateApiTokenResponses, CreateExpenseData, CreateExpenseErrors, CreateExpenseResponses, DeleteExpenseData, DeleteExpenseErrors, DeleteExpenseResponses, GetCurrentUserData, GetCurrentUserResponses, HealthData, HealthResponses, InviteToHouseholdData, InviteToHouseholdErrors, InviteToHouseholdResponses, ListApiTokensData, ListApiTokensResponses, ListCategoriesData, ListCategoriesResponses, ListExpensesData, ListExpensesErrors, ListExpensesResponses, ListMembersData, ListMembersErrors, ListMembersResponses, ListSpendingTypesData, ListSpendingTypesResponses, LogInData, LogInErrors, LogInResponses, LogOutData, LogOutResponses, RevokeApiTokenData, RevokeApiTokenErrors, RevokeApiTokenResponses, SignUpData, SignUpErrors, SignUpResponses, UpdateExpenseData, UpdateExpenseErrors, UpdateExpenseResponses } from './types.gen';
+import type { CreateApiTokenData, CreateApiTokenErrors, CreateApiTokenResponses, CreateExpenseData, CreateExpenseErrors, CreateExpenseResponses, CreateIncomeData, CreateIncomeErrors, CreateIncomeResponses, DeleteExpenseData, DeleteExpenseErrors, DeleteExpenseResponses, GetCurrentUserData, GetCurrentUserResponses, HealthData, HealthResponses, InviteToHouseholdData, InviteToHouseholdErrors, InviteToHouseholdResponses, ListApiTokensData, ListApiTokensResponses, ListCategoriesData, ListCategoriesResponses, ListExpensesData, ListExpensesErrors, ListExpensesResponses, ListIncomesData, ListIncomesErrors, ListIncomesResponses, ListMembersData, ListMembersErrors, ListMembersResponses, ListSpendingTypesData, ListSpendingTypesResponses, LogInData, LogInErrors, LogInResponses, LogOutData, LogOutResponses, RevokeApiTokenData, RevokeApiTokenErrors, RevokeApiTokenResponses, SignUpData, SignUpErrors, SignUpResponses, UpdateExpenseData, UpdateExpenseErrors, UpdateExpenseResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -225,6 +225,38 @@ export const revokeApiToken = <ThrowOnError extends boolean = false>(options: Op
         }, { scheme: 'bearer', type: 'http' }],
     url: '/api/tokens/{token_id}',
     ...options
+});
+
+/**
+ * List Incomes
+ *
+ * The household's incomes of one month (YYYY-MM), newest first.
+ */
+export const listIncomes = <ThrowOnError extends boolean = false>(options: Options<ListIncomesData, ThrowOnError>): RequestResult<ListIncomesResponses, ListIncomesErrors, ThrowOnError> => (options.client ?? client).get<ListIncomesResponses, ListIncomesErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }, { scheme: 'bearer', type: 'http' }],
+    url: '/api/households/{household_id}/incomes',
+    ...options
+});
+
+/**
+ * Create Income
+ */
+export const createIncome = <ThrowOnError extends boolean = false>(options: Options<CreateIncomeData, ThrowOnError>): RequestResult<CreateIncomeResponses, CreateIncomeErrors, ThrowOnError> => (options.client ?? client).post<CreateIncomeResponses, CreateIncomeErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'session',
+            type: 'apiKey'
+        }, { scheme: 'bearer', type: 'http' }],
+    url: '/api/households/{household_id}/incomes',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
