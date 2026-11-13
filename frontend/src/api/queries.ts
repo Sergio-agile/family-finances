@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createApiToken,
   createExpense,
+  deleteExpense,
   getCurrentUser,
   inviteToHousehold,
   listApiTokens,
@@ -173,6 +174,17 @@ export function useUpdateExpense() {
         })
       ).data,
     // The date may have moved the expense to another month, so refresh every cached list.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['expenses'] }),
+  })
+}
+
+export function useDeleteExpense() {
+  const queryClient = useQueryClient()
+  const householdId = useHouseholdId()
+
+  return useMutation({
+    mutationFn: (id: number) =>
+      deleteExpense({ path: { household_id: householdId, expense_id: id }, throwOnError: true }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['expenses'] }),
   })
 }

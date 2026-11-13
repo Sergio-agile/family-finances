@@ -522,6 +522,40 @@ export type CreateExpenseResponses = {
 
 export type CreateExpenseResponse = CreateExpenseResponses[keyof CreateExpenseResponses];
 
+export type DeleteExpenseData = {
+    body?: never;
+    path: {
+        /**
+         * Expense Id
+         */
+        expense_id: number;
+        /**
+         * Household Id
+         */
+        household_id: number;
+    };
+    query?: never;
+    url: '/api/households/{household_id}/expenses/{expense_id}';
+};
+
+export type DeleteExpenseErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteExpenseError = DeleteExpenseErrors[keyof DeleteExpenseErrors];
+
+export type DeleteExpenseResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteExpenseResponse = DeleteExpenseResponses[keyof DeleteExpenseResponses];
+
 export type UpdateExpenseData = {
     body: ExpenseUpdate;
     path: {
