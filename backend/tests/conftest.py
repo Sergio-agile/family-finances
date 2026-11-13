@@ -105,6 +105,15 @@ def household(session) -> Household:
 
 
 @pytest.fixture
+def other_household(session) -> Household:
+    """Another family, whose data no member of `household` may reach."""
+    household = Household(name="Casa de Luis")
+    session.add(household)
+    session.flush()
+    return household
+
+
+@pytest.fixture
 def user(session, household) -> User:
     """A member of `household`."""
     user = User(
@@ -127,6 +136,15 @@ def luis(session, household) -> User:
         password_hash=password_hash.hash(PASSWORD),
         households=[household],
     )
+    session.add(user)
+    session.flush()
+    return user
+
+
+@pytest.fixture
+def outsider(session) -> User:
+    """Someone who is not a member of `household`."""
+    user = User(name="Eva", email="eva@example.com", password_hash="unused")
     session.add(user)
     session.flush()
     return user

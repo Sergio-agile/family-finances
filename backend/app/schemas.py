@@ -13,6 +13,7 @@ from pydantic import (
 
 Concept = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
 PersonName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
+AmountCents = Annotated[int, Field(gt=0, description="Amount in cents: 12.50 € is 1250")]
 # Lowercased so "Ana@Example.com" and "ana@example.com" are the same account.
 Email = Annotated[EmailStr, AfterValidator(str.lower)]
 
@@ -41,7 +42,7 @@ class MemberRead(BaseModel):
 
 
 class ExpenseCreate(BaseModel):
-    amount_cents: int = Field(gt=0, description="Amount in cents: 12.50 € is 1250")
+    amount_cents: AmountCents
     concept: Concept
     category_id: int
     spending_type_id: int | None = None
@@ -82,6 +83,28 @@ class ExpenseRead(BaseModel):
     category: CategoryRead
     spending_type: SpendingTypeRead | None
     paid_by: MemberRead | None
+    created_by: MemberRead
+    created_at: datetime
+
+
+class IncomeCreate(BaseModel):
+    amount_cents: AmountCents
+    concept: Concept
+    received_by_id: int | None = Field(
+        default=None, description="The member who received it; null: not assigned yet"
+    )
+    # Fallback only: the client should send the date in the user's own timezone.
+    received_on: date = Field(default_factory=date.today)
+
+
+class IncomeRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    amount_cents: int
+    concept: str
+    received_on: date
+    received_by: MemberRead | None
     created_by: MemberRead
     created_at: datetime
 

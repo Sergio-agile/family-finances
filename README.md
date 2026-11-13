@@ -66,7 +66,7 @@ Daily database backups, kept on the server and pulled to a Mac: see [`deploy/bac
 
 ## Roadmap
 
-1. Expenses: add and list expenses, categories
+1. Expenses and incomes: add and list them, categories, monthly balance
 2. Auth and shared family accounts
 3. Webhooks + n8n (expenses → Google Sheets, weekly summary)
 4. Bank CSV import and reconciliation, LLM auto-categorization with evals

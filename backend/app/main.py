@@ -18,6 +18,7 @@ from app.routers import (
     categories,
     expenses,
     households,
+    incomes,
     invitations,
     spending_types,
 )
@@ -39,8 +40,9 @@ app.include_router(auth.router)
 # (write endpoints ask for `expenses:write` on top).
 for router in (categories.router, expenses.router, households.router, spending_types.router):
     app.include_router(router, dependencies=[Security(current_user, scopes=[READ_EXPENSES])])
-# Browser sessions only: a leaked token must not create tokens or invite anyone.
-for router in (api_tokens.router, invitations.router):
+# Browser sessions only: a leaked token must not create tokens or invite anyone. Incomes too,
+# until API tokens get scopes for them.
+for router in (api_tokens.router, incomes.router, invitations.router):
     app.include_router(router, dependencies=[Depends(current_user)])
 
 

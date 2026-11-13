@@ -1,19 +1,14 @@
-from datetime import date
-from typing import Annotated
-
-from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import delete, exists, select
+from fastapi import APIRouter, HTTPException, status
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.auth import ExpensesWriter, ReadableHousehold, WritableHousehold
 from app.db import SessionDep
-from app.models import Category, Expense, Membership, SpendingType
+from app.models import Category, Expense, SpendingType
+from app.routers.common import Month, ensure_member, month_bounds
 from app.schemas import ExpenseCreate, ExpenseRead, ExpenseUpdate
 
 router = APIRouter(prefix="/api/households/{household_id}/expenses", tags=["expenses"])
-
-# Required: the month bounds the list, so the response never grows with the whole history.
-Month = Annotated[str, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$", examples=["2026-10"])]
 
 
 def ensure_references_exist(session: Session, household_id: int, fields: dict) -> None:
@@ -27,22 +22,13 @@ def ensure_references_exist(session: Session, household_id: int, fields: dict) -
         if id_ is not None and session.get(model, id_) is None:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"{label} does not exist")
 
-    paid_by_id = fields.get("paid_by_id")
-    is_member = exists().where(
-        Membership.user_id == paid_by_id, Membership.household_id == household_id
-    )
-    if paid_by_id is not None and not session.scalar(select(is_member)):
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_CONTENT, "Payer does not belong to this household"
-        )
+    ensure_member(session, household_id, fields.get("paid_by_id"), "Payer")
 
 
 @router.get("", response_model=list[ExpenseRead])
 def list_expenses(household: ReadableHousehold, session: SessionDep, month: Month) -> list[Expense]:
     """The household's expenses of one month (YYYY-MM), newest first."""
-    year, month_number = map(int, month.split("-"))
-    start = date(year, month_number, 1)
-    end = date(year + month_number // 12, month_number % 12 + 1, 1)
+    start, end = month_bounds(month)
     query = (
         select(Expense)
         .options(

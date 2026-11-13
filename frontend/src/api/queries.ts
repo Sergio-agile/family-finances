@@ -2,12 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createApiToken,
   createExpense,
+  createIncome,
   deleteExpense,
   getCurrentUser,
   inviteToHousehold,
   listApiTokens,
   listCategories,
   listExpenses,
+  listIncomes,
   listMembers,
   listSpendingTypes,
   logIn,
@@ -18,6 +20,7 @@ import {
   type ApiTokenCreate,
   type ExpenseCreate,
   type ExpenseUpdate,
+  type IncomeCreate,
   type LogIn,
   type SignUp,
   type UserRead,
@@ -186,6 +189,39 @@ export function useDeleteExpense() {
     mutationFn: (id: number) =>
       deleteExpense({ path: { household_id: householdId, expense_id: id }, throwOnError: true }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['expenses'] }),
+  })
+}
+
+export function useIncomes(month: string) {
+  const householdId = useHouseholdId()
+
+  return useQuery({
+    queryKey: ['incomes', householdId, month],
+    queryFn: async () =>
+      (
+        await listIncomes({
+          path: { household_id: householdId },
+          query: { month },
+          throwOnError: true,
+        })
+      ).data,
+  })
+}
+
+export function useCreateIncome() {
+  const queryClient = useQueryClient()
+  const householdId = useHouseholdId()
+
+  return useMutation({
+    mutationFn: async (income: IncomeCreate) =>
+      (
+        await createIncome({
+          path: { household_id: householdId },
+          body: income,
+          throwOnError: true,
+        })
+      ).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['incomes'] }),
   })
 }
 

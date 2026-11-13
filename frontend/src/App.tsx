@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { useCurrentUser } from './api/queries'
 import type { UserRead } from './api/generated'
 import { AuthScreen } from './components/AuthScreen'
-import { ExpenseForm } from './components/ExpenseForm'
 import { ExpenseList } from './components/ExpenseList'
+import { IncomeList } from './components/IncomeList'
+import { MonthSummary } from './components/MonthSummary'
+import { NewEntryForm } from './components/NewEntryForm'
 import { SettingsDialog } from './components/SettingsDialog'
 import { currentMonth } from './lib/dates'
 import { readInvitation } from './lib/invitation'
@@ -66,7 +68,9 @@ function Home({ user }: { user: UserRead }) {
         </p>
       )}
 
-      <ExpenseForm />
+      <NewEntryForm />
+      <MonthSummary month={month} />
+      <IncomeList month={month} />
       <ExpenseList month={month} />
       {settingsOpen && <SettingsDialog user={user} onClose={() => setSettingsOpen(false)} />}
     </main>

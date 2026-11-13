@@ -5,3 +5,8 @@ export const inputClass =
 
 export const primaryButtonClass =
   'w-full rounded-lg bg-emerald-600 py-3 font-semibold text-white hover:bg-emerald-700 disabled:opacity-60'
+
+/** The white card that holds the form and every list. */
+export const cardClass = 'rounded-2xl bg-white shadow-sm'
+
+export const listCardClass = `divide-y divide-gray-100 overflow-hidden ${cardClass}`

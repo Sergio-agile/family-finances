@@ -71,6 +71,28 @@ class Expense(Base):
     paid_by: Mapped["User | None"] = relationship(foreign_keys=[paid_by_id])
 
 
+class Income(Base):
+    """Money coming into the household: a salary, a refund, a sale... Kept apart from expenses,
+    which carry fields an income has no use for (ADR 0013)."""
+
+    __tablename__ = "incomes"
+    # Same access pattern as expenses: by household, then by month.
+    __table_args__ = (Index("ix_incomes_household_id_received_on", "household_id", "received_on"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    household_id: Mapped[int] = mapped_column(ForeignKey("households.id", ondelete="CASCADE"))
+    amount_cents: Mapped[int]
+    concept: Mapped[str] = mapped_column(String(200))
+    received_on: Mapped[date]
+    created_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    # Who received it, to compare each member's income with what they paid. None: not assigned yet.
+    received_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    created_by: Mapped["User"] = relationship(foreign_keys=[created_by_id])
+    received_by: Mapped["User | None"] = relationship(foreign_keys=[received_by_id])
+
+
 class User(Base):
     __tablename__ = "users"
 

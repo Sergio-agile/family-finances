@@ -3,6 +3,7 @@ import { useDeleteExpense } from '../api/queries'
 import type { ExpenseRead } from '../api/generated'
 import { CloseButton, Dialog } from './Dialog'
 import { ExpenseForm } from './ExpenseForm'
+import { cardClass } from './styles'
 
 type Props = {
   expense: ExpenseRead
@@ -51,7 +52,7 @@ function DeleteExpense({ expense, onDeleted }: { expense: ExpenseRead; onDeleted
   }
 
   return (
-    <div className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
+    <div className={`space-y-3 p-4 ${cardClass}`}>
       <p className="text-gray-700">¿Eliminar «{expense.concept}»? No se puede deshacer.</p>
       {deleteExpense.isError && (
         <p className="text-sm text-red-600">No se ha podido eliminar. Inténtalo de nuevo.</p>

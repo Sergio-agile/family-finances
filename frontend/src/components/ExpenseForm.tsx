@@ -11,8 +11,9 @@ import {
 import type { ExpenseCreate, ExpenseRead } from '../api/generated'
 import { todayISO } from '../lib/dates'
 import { centsToInput, parseAmountToCents } from '../lib/money'
+import { AMOUNT_ERROR, AmountField } from './AmountField'
 import { OptionalSelect } from './OptionalSelect'
-import { inputClass, primaryButtonClass } from './styles'
+import { cardClass, inputClass, primaryButtonClass } from './styles'
 
 type Props = {
   /** When given, the form edits this expense instead of creating a new one. */
@@ -37,7 +38,7 @@ export function ExpenseForm({ expense, onSaved }: Props) {
 
     const amountCents = parseAmountToCents(String(data.get('amount')))
     if (amountCents === null) {
-      setAmountError('Escribe un importe positivo, por ejemplo 12,50')
+      setAmountError(AMOUNT_ERROR)
       return
     }
     setAmountError(null)
@@ -66,24 +67,11 @@ export function ExpenseForm({ expense, onSaved }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl bg-white p-4 shadow-sm">
-      <label className="block">
-        <span className="sr-only">Importe</span>
-        <div className="flex items-baseline gap-2 border-b-2 border-gray-200 focus-within:border-emerald-600">
-          <input
-            name="amount"
-            inputMode="decimal"
-            placeholder="0,00"
-            autoComplete="off"
-            required
-            defaultValue={expense && centsToInput(expense.amount_cents)}
-            aria-invalid={amountError !== null}
-            className="w-full bg-transparent py-2 text-4xl font-semibold tabular-nums focus:outline-none"
-          />
-          <span className="text-2xl text-gray-400">€</span>
-        </div>
-        {amountError && <p className="mt-1 text-sm text-red-600">{amountError}</p>}
-      </label>
+    <form onSubmit={handleSubmit} className={`space-y-4 p-4 ${cardClass}`}>
+      <AmountField
+        defaultValue={expense && centsToInput(expense.amount_cents)}
+        error={amountError}
+      />
 
       <label className="block">
         <span className="mb-1 block text-sm font-medium text-gray-700">Concepto</span>

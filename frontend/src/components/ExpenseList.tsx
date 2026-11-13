@@ -4,6 +4,7 @@ import type { ExpenseRead } from '../api/generated'
 import { formatDay } from '../lib/dates'
 import { formatCents } from '../lib/money'
 import { EditExpenseDialog } from './EditExpenseDialog'
+import { listCardClass } from './styles'
 
 /** Groups expenses by day, keeping the API's newest-first order. */
 function groupByDay(expenses: ExpenseRead[]): [string, ExpenseRead[]][] {
@@ -22,15 +23,9 @@ export function ExpenseList({ month }: { month: string }) {
   if (expenses.isError)
     return <p className="text-center text-red-600">No se han podido cargar los gastos.</p>
 
-  // Derived from server data on every render instead of being stored as separate state.
-  const total = expenses.data.reduce((sum, expense) => sum + expense.amount_cents, 0)
-
   return (
     <section className="space-y-4">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-gray-500">Total del mes</h2>
-        <p className="text-2xl font-semibold tabular-nums">{formatCents(total)}</p>
-      </div>
+      <h2 className="text-sm font-medium uppercase tracking-wide text-gray-500">Gastos</h2>
 
       {expenses.data.length === 0 && (
         <p className="py-8 text-center text-gray-500">Todavía no hay gastos este mes.</p>
@@ -39,7 +34,7 @@ export function ExpenseList({ month }: { month: string }) {
       {groupByDay(expenses.data).map(([day, dayExpenses]) => (
         <div key={day}>
           <h3 className="mb-1 text-sm font-medium text-gray-500 first-letter:uppercase">{formatDay(day)}</h3>
-          <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl bg-white shadow-sm">
+          <ul className={listCardClass}>
             {dayExpenses.map((expense) => (
               <li key={expense.id}>
                 <button
