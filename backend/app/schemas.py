@@ -8,7 +8,6 @@ from pydantic import (
     EmailStr,
     Field,
     StringConstraints,
-    field_validator,
 )
 
 Concept = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
@@ -53,24 +52,27 @@ class ExpenseCreate(BaseModel):
     spent_on: date = Field(default_factory=date.today)
 
 
+def reject_null(value: object) -> object:
+    if value is None:
+        raise ValueError("cannot be null")
+    return value
+
+
+# For partial updates of NOT NULL columns: the field may be omitted (None by default, which is
+# not validated), but not sent as null.
+NotNull = AfterValidator(reject_null)
+
+
 class ExpenseUpdate(BaseModel):
     """Partial update: only the fields sent are changed. `null` unassigns the optional
     `spending_type_id` and `paid_by_id`."""
 
-    amount_cents: int | None = Field(default=None, gt=0)
-    concept: Concept | None = None
-    category_id: int | None = None
+    amount_cents: Annotated[AmountCents | None, NotNull] = None
+    concept: Annotated[Concept | None, NotNull] = None
+    category_id: Annotated[int | None, NotNull] = None
     spending_type_id: int | None = None
     paid_by_id: int | None = None
-    spent_on: date | None = None
-
-    @field_validator("amount_cents", "concept", "category_id", "spent_on")
-    @classmethod
-    def reject_null(cls, value: object) -> object:
-        # Omitting these fields is fine; sending them as null is not, their columns are NOT NULL.
-        if value is None:
-            raise ValueError("cannot be null")
-        return value
+    spent_on: Annotated[date | None, NotNull] = None
 
 
 class ExpenseRead(BaseModel):
@@ -95,6 +97,15 @@ class IncomeCreate(BaseModel):
     )
     # Fallback only: the client should send the date in the user's own timezone.
     received_on: date = Field(default_factory=date.today)
+
+
+class IncomeUpdate(BaseModel):
+    """Partial update: only the fields sent are changed. `null` unassigns `received_by_id`."""
+
+    amount_cents: Annotated[AmountCents | None, NotNull] = None
+    concept: Annotated[Concept | None, NotNull] = None
+    received_by_id: int | None = None
+    received_on: Annotated[date | None, NotNull] = None
 
 
 class IncomeRead(BaseModel):

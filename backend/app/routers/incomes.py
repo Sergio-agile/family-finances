@@ -5,8 +5,15 @@ from sqlalchemy.orm import selectinload
 from app.auth import CurrentHousehold, CurrentUser
 from app.db import SessionDep
 from app.models import Income
-from app.routers.common import Month, ensure_member, month_bounds
-from app.schemas import IncomeCreate, IncomeRead
+from app.routers.common import (
+    Month,
+    apply_changes,
+    delete_in_household,
+    ensure_member,
+    get_in_household,
+    month_bounds,
+)
+from app.schemas import IncomeCreate, IncomeRead, IncomeUpdate
 
 router = APIRouter(prefix="/api/households/{household_id}/incomes", tags=["incomes"])
 
@@ -39,3 +46,21 @@ def create_income(
     session.commit()
     session.refresh(income)
     return income
+
+
+@router.patch("/{income_id}", response_model=IncomeRead)
+def update_income(
+    income_id: int, payload: IncomeUpdate, household: CurrentHousehold, session: SessionDep
+) -> Income:
+    income = get_in_household(session, Income, income_id, household.id)
+    # Only what the client sent: an omitted field stays as it is.
+    changes = payload.model_dump(exclude_unset=True)
+    ensure_member(session, household.id, changes.get("received_by_id"), "Recipient")
+    apply_changes(session, income, changes)
+    return income
+
+
+@router.delete("/{income_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_income(income_id: int, household: CurrentHousehold, session: SessionDep) -> None:
+    """Delete an income for good: there is no trash to restore it from."""
+    delete_in_household(session, Income, income_id, household.id)

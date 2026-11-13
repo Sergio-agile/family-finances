@@ -721,3 +721,25 @@ El selector Gasto | Ingreso son dos botones con `aria-pressed`. Así el lector d
 1. Si un día quieres que n8n meta las nóminas, ¿qué tendrías que cambiar para que un token pueda crear ingresos?
 2. ¿Qué pasa con los ingresos de alguien si se borra su usuario? ¿Y si se borra el hogar?
 3. Al cambiar de Gasto a Ingreso a mitad de escribir, ¿qué pasa con lo que habías tecleado? ¿Te parece bien?
+
+## Conceptos del PR 34: editar y borrar ingresos
+
+| Rails | Python / React | En este repo |
+|---|---|---|
+| métodos en un concern que funcionan con cualquier modelo (duck typing) | una función genérica: `def get_in_household[E: (Expense, Income)](…) -> E` | `app/routers/common.py` |
+| `validates :amount, presence: true` (pero solo si viene en el `update`) | `Annotated[int \| None, NotNull] = None` | `NotNull` en `schemas.py` |
+| un partial con `yield` y *locals* | un componente con `children` y props | `EditDialog` |
+
+### Funciones genéricas (Python 3.12)
+`get_in_household` busca un gasto *o* un ingreso dentro del hogar. Escrito `[E: (Expense, Income)]`, el editor sabe que, si le pasas `Income`, te devuelve un `Income` y no "algo". En Ruby no hace falta porque no hay tipos estáticos; aquí sirve para que el editor y la revisión detecten errores. El mensaje de error sale del nombre de la clase: `"Income not found"`.
+
+### `NotNull`: un validador reutilizable
+En una actualización parcial puedes **omitir** un campo, pero no mandarlo **a `null`** si su columna es NOT NULL. Antes eso lo hacía un `@field_validator` con la lista de campos dentro de `ExpenseUpdate`. Ahora es `NotNull = AfterValidator(reject_null)` y cada campo lo lleva en su tipo, así que `IncomeUpdate` lo reutiliza sin copiar nada. Funciona porque Pydantic no valida los valores por defecto: omitido → `None` sin validar; `null` enviado → se valida y se rechaza.
+
+### Un diálogo, dos usos
+`EditDialog` pone la cabecera ("Editar gasto/ingreso", "Apuntado por…") y el borrado con confirmación; el formulario le llega como `children`. `EditExpenseDialog` y `EditIncomeDialog` solo conectan su mutación y su formulario. A `EditDialog` le basta `{ isPending, isError }` de la mutación: no necesita saber de qué tipo es.
+
+## Preguntas para revisar el PR 34
+1. ¿Qué responde la API si mandas `PATCH` con `{"concept": null}`? ¿Y con `{"received_by_id": null}`? ¿Por qué son distintos?
+2. Si mañana añadimos "transferencias" con su propia tabla, ¿qué tendrías que tocar en `common.py` para que usen estos helpers?
+3. Al borrar un ingreso, ¿qué consultas se refrescan? ¿Se vuelve a pedir la lista de gastos?

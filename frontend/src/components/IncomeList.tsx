@@ -1,10 +1,14 @@
+import { useState } from 'react'
 import { useIncomes } from '../api/queries'
+import type { IncomeRead } from '../api/generated'
 import { formatDay } from '../lib/dates'
 import { formatCents } from '../lib/money'
-import { listCardClass } from './styles'
+import { EditIncomeDialog } from './EditIncomeDialog'
+import { listCardClass, rowButtonClass } from './styles'
 
 export function IncomeList({ month }: { month: string }) {
   const incomes = useIncomes(month)
+  const [editing, setEditing] = useState<IncomeRead | null>(null)
 
   return (
     <section className="space-y-2">
@@ -18,21 +22,28 @@ export function IncomeList({ month }: { month: string }) {
       ) : (
         <ul className={listCardClass}>
           {incomes.data.map((income) => (
-            <li key={income.id} className="flex items-center justify-between gap-3 px-4 py-3">
-              <div className="min-w-0">
-                <p className="truncate font-medium">{income.concept}</p>
-                <p className="text-sm text-gray-500 first-letter:uppercase">
-                  {formatDay(income.received_on)} ·{' '}
-                  {income.received_by?.name ?? <span className="text-amber-600">Sin asignar</span>}
+            <li key={income.id}>
+              <button
+                type="button"
+                onClick={() => setEditing(income)}
+                className={rowButtonClass}
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{income.concept}</p>
+                  <p className="text-sm text-gray-500 first-letter:uppercase">
+                    {formatDay(income.received_on)} ·{' '}
+                    {income.received_by?.name ?? <span className="text-amber-600">Sin asignar</span>}
+                  </p>
+                </div>
+                <p className="shrink-0 font-semibold tabular-nums text-emerald-700">
+                  +{formatCents(income.amount_cents)}
                 </p>
-              </div>
-              <p className="shrink-0 font-semibold tabular-nums text-emerald-700">
-                +{formatCents(income.amount_cents)}
-              </p>
+              </button>
             </li>
           ))}
         </ul>
       )}
+      {editing && <EditIncomeDialog income={editing} onClose={() => setEditing(null)} />}
     </section>
   )
 }

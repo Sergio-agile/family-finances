@@ -110,6 +110,95 @@ def test_does_not_list_another_households_incomes(
     assert [i["concept"] for i in response.json()] == ["Nuestra"]
 
 
+@pytest.fixture
+def salary(make_income) -> Income:
+    return make_income(concept="Nómina", amount_cents=180_000)
+
+
+def test_updates_several_fields_at_once(client, incomes_url, salary, luis):
+    response = client.patch(
+        f"{incomes_url}/{salary.id}",
+        json={
+            "amount_cents": 185_000,
+            "concept": " Nómina octubre ",
+            "received_on": "2026-10-30",
+            "received_by_id": luis.id,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["amount_cents"] == 185_000
+    assert body["concept"] == "Nómina octubre"
+    assert body["received_on"] == "2026-10-30"
+    assert body["received_by"] == {"id": luis.id, "name": "Luis"}
+
+
+def test_unassigns_the_recipient_with_null(client, incomes_url, make_income, luis):
+    income = make_income(received_by_id=luis.id)
+
+    response = client.patch(f"{incomes_url}/{income.id}", json={"received_by_id": None})
+
+    assert response.json()["received_by"] is None
+
+
+def test_an_omitted_field_stays_as_it_is(client, incomes_url, salary):
+    response = client.patch(f"{incomes_url}/{salary.id}", json={"concept": "Paga extra"})
+
+    assert response.json()["amount_cents"] == 180_000
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"amount_cents": None},
+        {"concept": None},
+        {"received_on": None},
+        {"amount_cents": 0},
+        {"concept": "   "},
+    ],
+)
+def test_update_rejects_invalid_values(client, incomes_url, salary, changes):
+    assert client.patch(f"{incomes_url}/{salary.id}", json=changes).status_code == 422
+
+
+def test_update_rejects_a_recipient_from_another_household(client, incomes_url, salary, outsider):
+    response = client.patch(f"{incomes_url}/{salary.id}", json={"received_by_id": outsider.id})
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Recipient does not belong to this household"
+
+
+def test_deletes_an_income(client, session, incomes_url, salary):
+    salary_id = salary.id  # read before the request: afterwards the object points at no row
+
+    response = client.delete(f"{incomes_url}/{salary_id}")
+
+    assert response.status_code == 204
+    assert session.get(Income, salary_id) is None
+
+
+@pytest.mark.parametrize("method", ["patch", "delete"])
+def test_unknown_income_is_404(client, incomes_url, method):
+    response = client.request(method, f"{incomes_url}/999999", json={"concept": "Algo"})
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Income not found"
+
+
+@pytest.mark.parametrize("method", ["patch", "delete"])
+def test_cannot_touch_another_households_income_through_own_household(
+    client, session, incomes_url, make_income, other_household, method
+):
+    theirs = make_income(concept="De Luis", household_id=other_household.id)
+
+    response = client.request(method, f"{incomes_url}/{theirs.id}", json={"concept": "Hackeado"})
+
+    assert response.status_code == 404
+    session.refresh(theirs)
+    assert theirs.concept == "De Luis"
+
+
 @pytest.mark.parametrize("method", ["get", "post"])
 def test_rejects_a_household_the_user_is_not_a_member_of(client, other_household, method):
     response = client.request(

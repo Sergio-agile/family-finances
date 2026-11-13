@@ -10,3 +10,6 @@ export const primaryButtonClass =
 export const cardClass = 'rounded-2xl bg-white shadow-sm'
 
 export const listCardClass = `divide-y divide-gray-100 overflow-hidden ${cardClass}`
+
+/** A tappable row in a list: opens the item to edit it. */
+export const rowButtonClass = 'flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50'
