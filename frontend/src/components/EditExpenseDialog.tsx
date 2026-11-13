@@ -43,7 +43,7 @@ function DeleteExpense({ expense, onDeleted }: { expense: ExpenseRead; onDeleted
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="w-full rounded-lg py-3 font-semibold text-red-200 hover:bg-white/10"
+        className="w-full rounded-lg bg-white py-3 font-semibold text-red-600 shadow-sm hover:bg-red-50"
       >
         Eliminar gasto
       </button>
