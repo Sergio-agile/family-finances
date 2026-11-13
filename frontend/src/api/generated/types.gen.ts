@@ -280,6 +280,30 @@ export type IncomeRead = {
 };
 
 /**
+ * IncomeUpdate
+ *
+ * Partial update: only the fields sent are changed. `null` unassigns `received_by_id`.
+ */
+export type IncomeUpdate = {
+    /**
+     * Amount Cents
+     */
+    amount_cents?: number | null;
+    /**
+     * Concept
+     */
+    concept?: string | null;
+    /**
+     * Received By Id
+     */
+    received_by_id?: number | null;
+    /**
+     * Received On
+     */
+    received_on?: string | null;
+};
+
+/**
  * InvitationRead
  */
 export type InvitationRead = {
@@ -833,6 +857,74 @@ export type CreateIncomeResponses = {
 };
 
 export type CreateIncomeResponse = CreateIncomeResponses[keyof CreateIncomeResponses];
+
+export type DeleteIncomeData = {
+    body?: never;
+    path: {
+        /**
+         * Income Id
+         */
+        income_id: number;
+        /**
+         * Household Id
+         */
+        household_id: number;
+    };
+    query?: never;
+    url: '/api/households/{household_id}/incomes/{income_id}';
+};
+
+export type DeleteIncomeErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteIncomeError = DeleteIncomeErrors[keyof DeleteIncomeErrors];
+
+export type DeleteIncomeResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteIncomeResponse = DeleteIncomeResponses[keyof DeleteIncomeResponses];
+
+export type UpdateIncomeData = {
+    body: IncomeUpdate;
+    path: {
+        /**
+         * Income Id
+         */
+        income_id: number;
+        /**
+         * Household Id
+         */
+        household_id: number;
+    };
+    query?: never;
+    url: '/api/households/{household_id}/incomes/{income_id}';
+};
+
+export type UpdateIncomeErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateIncomeError = UpdateIncomeErrors[keyof UpdateIncomeErrors];
+
+export type UpdateIncomeResponses = {
+    /**
+     * Successful Response
+     */
+    200: IncomeRead;
+};
+
+export type UpdateIncomeResponse = UpdateIncomeResponses[keyof UpdateIncomeResponses];
 
 export type InviteToHouseholdData = {
     body?: never;

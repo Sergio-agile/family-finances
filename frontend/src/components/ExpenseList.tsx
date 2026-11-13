@@ -4,7 +4,7 @@ import type { ExpenseRead } from '../api/generated'
 import { formatDay } from '../lib/dates'
 import { formatCents } from '../lib/money'
 import { EditExpenseDialog } from './EditExpenseDialog'
-import { listCardClass } from './styles'
+import { listCardClass, rowButtonClass } from './styles'
 
 /** Groups expenses by day, keeping the API's newest-first order. */
 function groupByDay(expenses: ExpenseRead[]): [string, ExpenseRead[]][] {
@@ -40,7 +40,7 @@ export function ExpenseList({ month }: { month: string }) {
                 <button
                   type="button"
                   onClick={() => setEditing(expense)}
-                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50"
+                  className={rowButtonClass}
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium">{expense.concept}</p>

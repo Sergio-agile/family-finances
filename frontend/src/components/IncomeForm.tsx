@@ -1,16 +1,25 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { useCreateIncome, useCurrentUser, useMembers } from '../api/queries'
+import { useCreateIncome, useCurrentUser, useMembers, useUpdateIncome } from '../api/queries'
+import type { IncomeCreate, IncomeRead } from '../api/generated'
 import { todayISO } from '../lib/dates'
-import { parseAmountToCents } from '../lib/money'
+import { centsToInput, parseAmountToCents } from '../lib/money'
 import { AMOUNT_ERROR, AmountField } from './AmountField'
 import { OptionalSelect } from './OptionalSelect'
 import { cardClass, inputClass, primaryButtonClass } from './styles'
 
-export function IncomeForm() {
+type Props = {
+  /** When given, the form edits this income instead of creating a new one. */
+  income?: IncomeRead
+  onSaved?: () => void
+}
+
+export function IncomeForm({ income, onSaved }: Props) {
   const members = useMembers()
   const currentUser = useCurrentUser()
   const createIncome = useCreateIncome()
+  const updateIncome = useUpdateIncome()
+  const mutation = income ? updateIncome : createIncome
   const [amountError, setAmountError] = useState<string | null>(null)
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -25,21 +34,32 @@ export function IncomeForm() {
     }
     setAmountError(null)
 
-    createIncome.mutate(
-      {
-        amount_cents: amountCents,
-        concept: String(data.get('concept')),
-        // The empty option ("") means not assigned yet.
-        received_by_id: Number(data.get('received_by_id')) || null,
-        received_on: String(data.get('received_on')),
-      },
-      { onSuccess: () => form.reset() },
-    )
+    const values: IncomeCreate = {
+      amount_cents: amountCents,
+      concept: String(data.get('concept')),
+      // The empty option ("") means not assigned yet.
+      received_by_id: Number(data.get('received_by_id')) || null,
+      received_on: String(data.get('received_on')),
+    }
+
+    if (income) {
+      updateIncome.mutate({ id: income.id, changes: values }, { onSuccess: onSaved })
+    } else {
+      createIncome.mutate(values, {
+        onSuccess: () => {
+          form.reset()
+          onSaved?.()
+        },
+      })
+    }
   }
 
   return (
     <form onSubmit={handleSubmit} className={`space-y-4 p-4 ${cardClass}`}>
-      <AmountField error={amountError} />
+      <AmountField
+        defaultValue={income && centsToInput(income.amount_cents)}
+        error={amountError}
+      />
 
       <label className="block">
         <span className="mb-1 block text-sm font-medium text-gray-700">Concepto</span>
@@ -48,6 +68,7 @@ export function IncomeForm() {
           required
           maxLength={200}
           placeholder="Nómina, venta, devolución…"
+          defaultValue={income?.concept}
           className={inputClass}
         />
       </label>
@@ -59,7 +80,7 @@ export function IncomeForm() {
             name="received_on"
             type="date"
             required
-            defaultValue={todayISO()}
+            defaultValue={income?.received_on ?? todayISO()}
             className={inputClass}
           />
         </label>
@@ -69,16 +90,16 @@ export function IncomeForm() {
           emptyLabel="Sin asignar"
           options={members}
           // Usually whoever writes it down received it; it can be changed.
-          defaultValue={currentUser.data?.id}
+          defaultValue={income ? income.received_by?.id : currentUser.data?.id}
         />
       </div>
 
-      {createIncome.isError && (
+      {mutation.isError && (
         <p className="text-sm text-red-600">No se ha podido guardar el ingreso. Inténtalo de nuevo.</p>
       )}
 
-      <button type="submit" disabled={createIncome.isPending} className={primaryButtonClass}>
-        {createIncome.isPending ? 'Guardando…' : 'Añadir ingreso'}
+      <button type="submit" disabled={mutation.isPending} className={primaryButtonClass}>
+        {mutation.isPending ? 'Guardando…' : income ? 'Guardar cambios' : 'Añadir ingreso'}
       </button>
     </form>
   )

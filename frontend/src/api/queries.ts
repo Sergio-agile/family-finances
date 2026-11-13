@@ -4,6 +4,7 @@ import {
   createExpense,
   createIncome,
   deleteExpense,
+  deleteIncome,
   getCurrentUser,
   inviteToHousehold,
   listApiTokens,
@@ -17,10 +18,12 @@ import {
   revokeApiToken,
   signUp,
   updateExpense,
+  updateIncome,
   type ApiTokenCreate,
   type ExpenseCreate,
   type ExpenseUpdate,
   type IncomeCreate,
+  type IncomeUpdate,
   type LogIn,
   type SignUp,
   type UserRead,
@@ -221,6 +224,35 @@ export function useCreateIncome() {
           throwOnError: true,
         })
       ).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['incomes'] }),
+  })
+}
+
+export function useUpdateIncome() {
+  const queryClient = useQueryClient()
+  const householdId = useHouseholdId()
+
+  return useMutation({
+    mutationFn: async ({ id, changes }: { id: number; changes: IncomeUpdate }) =>
+      (
+        await updateIncome({
+          path: { household_id: householdId, income_id: id },
+          body: changes,
+          throwOnError: true,
+        })
+      ).data,
+    // The date may have moved the income to another month, so refresh every cached list.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['incomes'] }),
+  })
+}
+
+export function useDeleteIncome() {
+  const queryClient = useQueryClient()
+  const householdId = useHouseholdId()
+
+  return useMutation({
+    mutationFn: (id: number) =>
+      deleteIncome({ path: { household_id: householdId, income_id: id }, throwOnError: true }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['incomes'] }),
   })
 }

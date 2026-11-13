@@ -1,11 +1,18 @@
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.auth import ExpensesWriter, ReadableHousehold, WritableHousehold
 from app.db import SessionDep
 from app.models import Category, Expense, SpendingType
-from app.routers.common import Month, ensure_member, month_bounds
+from app.routers.common import (
+    Month,
+    apply_changes,
+    delete_in_household,
+    ensure_member,
+    get_in_household,
+    month_bounds,
+)
 from app.schemas import ExpenseCreate, ExpenseRead, ExpenseUpdate
 
 router = APIRouter(prefix="/api/households/{household_id}/expenses", tags=["expenses"])
@@ -64,32 +71,15 @@ def create_expense(
 def update_expense(
     expense_id: int, payload: ExpenseUpdate, household: WritableHousehold, session: SessionDep
 ) -> Expense:
-    # Looked up inside the household: another household's expense is as missing as a wrong id.
-    expense = session.scalar(
-        select(Expense).where(Expense.id == expense_id, Expense.household_id == household.id)
-    )
-    if expense is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Expense not found")
-
+    expense = get_in_household(session, Expense, expense_id, household.id)
     # Only what the client sent: an omitted field stays as it is.
     changes = payload.model_dump(exclude_unset=True)
     ensure_references_exist(session, household.id, changes)
-
-    for field, value in changes.items():
-        setattr(expense, field, value)
-    session.commit()
-    session.refresh(expense)
+    apply_changes(session, expense, changes)
     return expense
 
 
 @router.delete("/{expense_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_expense(expense_id: int, household: WritableHousehold, session: SessionDep) -> None:
     """Delete an expense for good: there is no trash to restore it from."""
-    # One statement, scoped to the household: another household's expense is as missing as a
-    # wrong id, and nothing is loaded just to be deleted.
-    deleted = session.execute(
-        delete(Expense).where(Expense.id == expense_id, Expense.household_id == household.id)
-    )
-    if deleted.rowcount == 0:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Expense not found")
-    session.commit()
+    delete_in_household(session, Expense, expense_id, household.id)
