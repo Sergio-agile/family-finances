@@ -743,3 +743,24 @@ En una actualización parcial puedes **omitir** un campo, pero no mandarlo **a `
 1. ¿Qué responde la API si mandas `PATCH` con `{"concept": null}`? ¿Y con `{"received_by_id": null}`? ¿Por qué son distintos?
 2. Si mañana añadimos "transferencias" con su propia tabla, ¿qué tendrías que tocar en `common.py` para que usen estos helpers?
 3. Al borrar un ingreso, ¿qué consultas se refrescan? ¿Se vuelve a pedir la lista de gastos?
+
+## Conceptos del PR 37: resumen de ingresos por persona
+
+| Rails | Python / React | En este repo |
+|---|---|---|
+| `incomes.group_by(&:received_by).transform_values { _1.sum(&:amount_cents) }` | un bucle que rellena un `Map` | `groupIncomesByReceiver` en `lib/incomes.ts` |
+| un controlador Stimulus `toggle` (o el mismo `<details>` en la vista ERB) | `<details>` + `<summary>` nativos, sin `useState` | `IncomeList` |
+| — | variantes de Tailwind `group` / `group-open:` | la flecha que gira en `IncomeList` |
+
+### Agrupar en el navegador, no en SQL
+La regla es "agrega en SQL". Aquí no hace falta: el resumen del mes ya pide la lista de ingresos y TanStack Query la tiene en caché, así que agrupar en el navegador no añade ninguna petición. Un endpoint de totales nos obligaría a hacer **otra** petición y, de todas formas, para editar seguimos necesitando la lista. JavaScript no tiene un `group_by` cómodo que funcione en todos los navegadores (`Map.groupBy` es muy reciente en Safari), así que es un `for` que suma y va guardando cada ingreso en su grupo.
+
+### `<details>`: plegar sin estado de React
+`<details>` es HTML puro: el navegador guarda si está abierto o cerrado, y es accesible con teclado y lector de pantalla sin hacer nada. No hay `useState`, así que al abrir o cerrar un grupo React no vuelve a renderizar nada. Como cada `<details>` tiene una `key` estable (el id de la persona), cuando editas un ingreso y la lista se refresca el grupo sigue abierto.
+
+### `group` y `group-open:` en Tailwind
+Pones `group` en el padre (`<details className="group">`) y en un hijo usas `group-open:rotate-90`: la flecha gira cuando el padre tiene el atributo `open`. Así el estilo depende del estado del padre sin escribir CSS a mano ni pasar props.
+
+## Preguntas para revisar el PR 37
+1. ¿Cuántas peticiones hace la pantalla al cargar un mes? ¿Ha cambiado respecto al PR 34?
+2. Si abres el grupo de una persona y editas uno de sus ingresos, ¿por qué el grupo sigue abierto después de guardar?
